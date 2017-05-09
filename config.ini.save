@@ -1,0 +1,12 @@
+[CAFFE]
+train=True
+net_path=models_mnist/net.prototxt
+sover_path=models_mnist/solver.prototxt
+
+[RISTRETTO]
+dynamic_fixed_point=True
+mini_float=True
+integer_power
+iterations=100
+error_margin=1
+
