@@ -16,7 +16,8 @@ Install valgrind
 sudo apt-get install valgrind
 ```
 
-Create a config.ini file like the one in the repository
+Create a config.ini file like the one in the repository, where the solver path is relative to the cwd
+In the network protofile you need to insert the absolute path to the lmdb database
 
 Run
 

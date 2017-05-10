@@ -36,7 +36,7 @@ class SolverReader:
 		f = open(self.solver_path, 'r')
 		Merge(f.read(), new_solver) # new_solver is a clone of self.solver
 		# change the solver file
-		new_solver.net = compressionOutputFilename(compression_mode)
+		new_solver.net = self.compressionOutputFilename(compression_mode)
 		new_solver.snapshot_prefix += '_' + compression_mode
 		filename = self.solver_path.split('.')[0] + '_' + compression_mode + '.prototxt'
 		new_solver_file = open(filename, 'w')

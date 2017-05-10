@@ -12,7 +12,7 @@ from utility.solver_reader import SolverReader
 # snapshot_prefix in the solver .prototxt file
 #
 def train(solver_filename):
-	solver = caffe.SGDSolver(solver_filename)
+	solver = caffe.SGDSolver(str(solver_filename))
 	caffe.set_mode_cpu()
 	solver.solve()
 
@@ -44,7 +44,7 @@ def fine_tune(solver_filename, compression_mode):
 	# create a new solver file, equal to the input
 	# but with compressed network as target
 	solver_reader = SolverReader(solver_filename)
-	fine_tune_solver_file = solver_reader.fineTuneSolverFile()
+	fine_tune_solver_file = solver_reader.fineTuneSolverFile(compression_mode)
 	train(fine_tune_solver_file)
 
 #
@@ -56,7 +56,7 @@ def test(solver_filename, test_iterations):
 	net = solver_reader.solver.net
 	weights = solver_reader.weightsFilename()
 	# create the output file for valgrind
-	valgrind_file = 
+	#valgrind_file = 
 	command = "valgrind --tool=cachegrind --cachegrind-out-file=\
 		$RISTRETTOPATH/build/tools/caffe test \
 		-model=" + net + "\
@@ -84,6 +84,8 @@ if __name__ == "__main__":
 	# go in the directory of the solver
 	os.chdir(os.path.dirname(solver_path))
 	solver_filename = solver_path.split('/')[len(solver_path.split('/'))-1]
+	print solver_filename
+	print os.getcwd()
 
 	# train the input net
 	if to_train:
