@@ -9,6 +9,6 @@ power: 0.75
 momentum: 0.899999976158
 weight_decay: 0.000500000023749
 snapshot: 5000
-snapshot_prefix: "snapshot/_dynamic_fixed_point"
+snapshot_prefix: "snapshot/_minifloat"
 solver_mode: CPU
-net: "net_dynamic_fixed_point.prototxt"
+net: "net_minifloat.prototxt"

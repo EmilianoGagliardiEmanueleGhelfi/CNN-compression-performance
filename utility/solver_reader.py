@@ -27,7 +27,7 @@ class SolverReader:
 		net = self.solver.net
 		return net.split('.')[0] + '_' + compression_mode + '.prototxt'
 
-	def fineTuneSolverFile(self, compression_mode):
+	def createFineTuneSolverFile(self, compression_mode):
 		"""
 		create a new file solver for the compressed network with the 
 		adopted convention and return the filename
@@ -38,8 +38,11 @@ class SolverReader:
 		# change the solver file
 		new_solver.net = self.compressionOutputFilename(compression_mode)
 		new_solver.snapshot_prefix += '_' + compression_mode
-		filename = self.solver_path.split('.')[0] + '_' + compression_mode + '.prototxt'
+		filename = self.fineTuneSolverName(compression_mode)
 		new_solver_file = open(filename, 'w')
 		new_solver_file.write(MessageToString(new_solver))
 		new_solver_file.close()
 		return filename
+
+	def fineTuneSolverName(self, compression_mode):
+		return self.solver_path.split('.')[0] + '_' + compression_mode + '.prototxt'
