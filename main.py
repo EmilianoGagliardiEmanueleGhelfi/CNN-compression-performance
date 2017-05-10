@@ -51,13 +51,15 @@ def fine_tune(solver_filename, compression_mode):
 # obtain the name of the net and the name of the weights file
 # from the solver file and call valgrind 
 #
-def test(solver_filename, test_iterations):
+def test(solver_filename, test_iterations,performance_path):
 	solver_reader = SolverReader(solver_filename)
 	net = solver_reader.solver.net
 	weights = solver_reader.weightsFilename()
+	# create the folder if not exists
+	if not os.path.exists(performance_path):
+		os.mkdir(performance_path)
 	# create the output file for valgrind
-	#TODO to be fixed
-	cachegrind_out_file = 'performance/' + net.split('.')[0] + '_cachegrind.txt'
+	cachegrind_out_file = performance_path + '/' + net.split('.')[0] + '_cachegrind.txt'
 	# create the output file
 	command = "valgrind --tool=cachegrind \
 		--cachegrind-out-file=" + cachegrind_out_file + "\
@@ -84,6 +86,7 @@ if __name__ == "__main__":
 	iterations = config['RISTRETTO']['iterations']
 	test_iterations = config['TEST']['iterations']
 	performance = config['TEST'].getboolean('performance')
+	performance_path = config['TEST']['performance_path']
 
 	# go in the directory of the solver
 	os.chdir(os.path.dirname(solver_path))
@@ -103,10 +106,10 @@ if __name__ == "__main__":
 
 	# run the test through valgrind for the non compressed network
 	if performance:
-		test(solver_filename, test_iterations)
+		test(solver_filename, test_iterations,performance_path)
 		solver_reader = SolverReader(solver_filename)
 		for compression_mode in ('dynamic_fixed_point', 'minifloat', 'integer_power_of_2_weights'):
 			if config['RISTRETTO'][compression_mode]:
 				fine_tune_solver = solver_reader.fineTuneSolverName(compression_mode)
-				test(fine_tune_solver, test_iterations)
+				test(fine_tune_solver, test_iterations,performance_path)
 

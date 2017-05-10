@@ -27,6 +27,34 @@ python main.py config.ini
 
 The output files are written in the solver protofile directory, while the compressed and trained network are in the folder specified in the snapshot_prefix in the solver protofile
 
+## Config file
+Here's an example of a config.ini file with the supported parameters:
+
+```
+[CAFFE]
+# True for training, false otherwise
+train=True
+# Solver path relative to the current working directory
+solver_path=models_mnist/solver.prototxt
+
+[RISTRETTO]
+# True if you need to compress with these schemes
+dynamic_fixed_point=True
+minifloat=True
+integer_power_of_2_weights=True
+# ristretto quantize parameters
+iterations=10
+error_margin=1
+
+[TEST]
+# number of iterations in test phase
+iterations=10
+# True if need to evaluate perfomances
+performance=True
+# folder in which the output file of valgrind will be written
+performance_path = perf
+```
+
 # Authors
 
 - Emanuele Ghelfi

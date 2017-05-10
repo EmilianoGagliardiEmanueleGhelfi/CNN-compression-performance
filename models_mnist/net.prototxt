@@ -10,7 +10,7 @@ layer {
     phase: TRAIN
   }
   data_param {
-    source: "/home/emilianogagliardi/bin/caffe-ristretto/examples/mnist/mnist_train_lmdb"
+    source: "/home/emanueleghelfi/Dev/ristretto/examples/mnist/mnist_train_lmdb"
     backend: LMDB
     batch_size: 64
   }
@@ -28,7 +28,7 @@ layer {
     phase: TEST
   }
   data_param {
-    source: "/home/emilianogagliardi/bin/caffe-ristretto/examples/mnist/mnist_test_lmdb"
+    source: "/home/emanueleghelfi/Dev/ristretto/examples/mnist/mnist_test_lmdb"
     backend: LMDB
     batch_size: 100
   }
