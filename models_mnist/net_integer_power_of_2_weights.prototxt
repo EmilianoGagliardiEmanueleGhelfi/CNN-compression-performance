@@ -1,46 +1,49 @@
 name: "mnist"
-
 layer {
   name: "mnist"
   type: "Data"
-  transform_param {
-    scale: 0.00390625
-  }
+  top: "data"
+  top: "label"
   include {
     phase: TRAIN
   }
-  data_param {
-    source: "/home/emilianogagliardi/bin/caffe-ristretto/examples/mnist/mnist_train_lmdb"
-    backend: LMDB
-    batch_size: 64
-  }
-  top: "data"
-  top: "label"
-}
-
-layer {
-  name: "mnist"
-  type: "Data"
   transform_param {
     scale: 0.00390625
   }
+  data_param {
+    source: "/home/emilianogagliardi/bin/caffe-ristretto/examples/mnist/mnist_train_lmdb"
+    batch_size: 64
+    backend: LMDB
+  }
+}
+layer {
+  name: "mnist"
+  type: "Data"
+  top: "data"
+  top: "label"
   include {
     phase: TEST
   }
+  transform_param {
+    scale: 0.00390625
+  }
   data_param {
     source: "/home/emilianogagliardi/bin/caffe-ristretto/examples/mnist/mnist_test_lmdb"
-    backend: LMDB
     batch_size: 100
+    backend: LMDB
   }
-  top: "data"
-  top: "label"
 }
-
 layer {
   name: "conv1"
-  type: "Convolution"
-  param { lr_mult: 1 }
-  param { lr_mult: 2 }
+  type: "ConvolutionRistretto"
+  bottom: "data"
+  top: "conv1"
+  param {
+    lr_mult: 1
+  }
+  param {
+    lr_mult: 2
+  }
   convolution_param {
     num_output: 20
     kernel_size: 5
@@ -52,27 +55,38 @@ layer {
       type: "constant"
     }
   }
-  bottom: "data"
-  top: "conv1"
+  quantization_param {
+    precision: INTEGER_POWER_OF_2_WEIGHTS
+    bw_layer_in: 8
+    bw_layer_out: 8
+    fl_layer_in: 8
+    fl_layer_out: 6
+    exp_min: -8
+    exp_max: -1
+  }
 }
-
 layer {
   name: "pool1"
   type: "Pooling"
-  pooling_param {
-    kernel_size: 2
-    stride: 2
-    pool: MAX
-  }
   bottom: "conv1"
   top: "pool1"
+  pooling_param {
+    pool: MAX
+    kernel_size: 2
+    stride: 2
+  }
 }
-
 layer {
   name: "conv2"
-  type: "Convolution"
-  param { lr_mult: 1 }
-  param { lr_mult: 2 }
+  type: "ConvolutionRistretto"
+  bottom: "pool1"
+  top: "conv2"
+  param {
+    lr_mult: 1
+  }
+  param {
+    lr_mult: 2
+  }
   convolution_param {
     num_output: 50
     kernel_size: 5
@@ -84,27 +98,38 @@ layer {
       type: "constant"
     }
   }
-  bottom: "pool1"
-  top: "conv2"
+  quantization_param {
+    precision: INTEGER_POWER_OF_2_WEIGHTS
+    bw_layer_in: 8
+    bw_layer_out: 8
+    fl_layer_in: 6
+    fl_layer_out: 4
+    exp_min: -8
+    exp_max: -1
+  }
 }
-
 layer {
   name: "pool2"
   type: "Pooling"
-  pooling_param {
-    kernel_size: 2
-    stride: 2
-    pool: MAX
-  }
   bottom: "conv2"
   top: "pool2"
+  pooling_param {
+    pool: MAX
+    kernel_size: 2
+    stride: 2
+  }
 }
-
 layer {
   name: "ip1"
-  type: "InnerProduct"
-  param { lr_mult: 1 }
-  param { lr_mult: 2 }
+  type: "FcRistretto"
+  bottom: "pool2"
+  top: "ip1"
+  param {
+    lr_mult: 1
+  }
+  param {
+    lr_mult: 2
+  }
   inner_product_param {
     num_output: 500
     weight_filler {
@@ -114,22 +139,33 @@ layer {
       type: "constant"
     }
   }
-  bottom: "pool2"
-  top: "ip1"
+  quantization_param {
+    precision: INTEGER_POWER_OF_2_WEIGHTS
+    bw_layer_in: 8
+    bw_layer_out: 8
+    fl_layer_in: 4
+    fl_layer_out: 4
+    exp_min: -8
+    exp_max: -1
+  }
 }
-
 layer {
   name: "relu1"
   type: "ReLU"
   bottom: "ip1"
   top: "ip1"
 }
-
 layer {
   name: "ip2"
-  type: "InnerProduct"
-  param { lr_mult: 1 }
-  param { lr_mult: 2 }
+  type: "FcRistretto"
+  bottom: "ip1"
+  top: "ip2"
+  param {
+    lr_mult: 1
+  }
+  param {
+    lr_mult: 2
+  }
   inner_product_param {
     num_output: 10
     weight_filler {
@@ -139,10 +175,16 @@ layer {
       type: "constant"
     }
   }
-  bottom: "ip1"
-  top: "ip2"
+  quantization_param {
+    precision: INTEGER_POWER_OF_2_WEIGHTS
+    bw_layer_in: 8
+    bw_layer_out: 8
+    fl_layer_in: 4
+    fl_layer_out: 3
+    exp_min: -8
+    exp_max: -1
+  }
 }
-
 layer {
   name: "loss"
   type: "SoftmaxWithLoss"
@@ -150,13 +192,12 @@ layer {
   bottom: "label"
   top: "loss"
 }
-
 layer {
   name: "accuracy"
   type: "Accuracy"
-  top: "accuracy"
   bottom: "ip2"
   bottom: "label"
+  top: "accuracy"
   include {
     phase: TEST
   }
