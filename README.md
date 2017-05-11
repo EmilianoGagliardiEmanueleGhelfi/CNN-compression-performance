@@ -16,16 +16,15 @@ Install valgrind
 sudo apt-get install valgrind
 ```
 
-Create a config.ini file like the one in the repository, where the solver path is relative to the cwd
-In the network protofile you need to insert the absolute path to the lmdb database
+- Create a config.ini file
+- The network protofile have to contain the absolute path to the dataset or the relative from the current working directory
+- in the solver protofile the path to the network and the snapshot prefix have to be respect to the current working directory
 
 Run
 
 ```
 python main.py config.ini
 ``` 
-
-The output files are written in the solver protofile directory, while the compressed and trained network are in the folder specified in the snapshot_prefix in the solver protofile
 
 ## Config file
 Here's an example of a config.ini file with the supported parameters:
@@ -51,7 +50,7 @@ error_margin=1
 iterations=10
 # True if need to evaluate perfomances
 performance=True
-# folder in which the output file of valgrind will be written
+# folder in which the output file of valgrind will be written (relative to the current working direcory)
 performance_path = perf
 ```
 
