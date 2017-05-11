@@ -9,6 +9,6 @@ power: 0.75
 momentum: 0.899999976158
 weight_decay: 0.000500000023749
 snapshot: 5000
-snapshot_prefix: "snapshot/_integer_power_of_2_weights"
+snapshot_prefix: "models_mnist/snapshot/_integer_power_of_2_weights"
 solver_mode: CPU
-net: "net_integer_power_of_2_weights.prototxt"
+net: "models_mnist/net_integer_power_of_2_weights.prototxt"

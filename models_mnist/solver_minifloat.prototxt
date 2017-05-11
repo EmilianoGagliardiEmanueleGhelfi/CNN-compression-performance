@@ -9,6 +9,6 @@ power: 0.75
 momentum: 0.899999976158
 weight_decay: 0.000500000023749
 snapshot: 5000
-snapshot_prefix: "snapshot/_minifloat"
+snapshot_prefix: "models_mnist/snapshot/_minifloat"
 solver_mode: CPU
-net: "net_minifloat.prototxt"
+net: "models_mnist/net_minifloat.prototxt"
