@@ -6,7 +6,7 @@ import os
 import subprocess
 
 from utility.solver_reader import SolverReader
-from utility.output_parser import parser_filter
+from utility.net_performance import NetPerformance
 
 #
 # train the network, you will find the weights files as in the definition of the
@@ -52,7 +52,7 @@ def fine_tune(solver_filename, compression_mode):
 # obtain the name of the net and the name of the weights file
 # from the solver file and call valgrind 
 #
-def test(solver_filename, test_iterations,performance_path,benchmark_output_filename):
+def test(solver_filename, test_iterations,performance_path):
 	solver_reader = SolverReader(solver_filename)
 	net = solver_reader.solver.net
 	weights = solver_reader.weightsFilename()
@@ -62,24 +62,17 @@ def test(solver_filename, test_iterations,performance_path,benchmark_output_file
 	# create the cachegrind output file
 	net_name = net.split('/')[len(net.split('/'))-1].split('.')[0]
 	cachegrind_out_file = performance_path + '/' + net_name + '_cachegrind.txt'
-	# create the filtered output file
-	benchmark_output_dir = os.path.dirname(benchmark_output_filename)
-	if not os.path.exists(benchmark_output_dir):
-		os.mkdir(benchmark_output_dir)
-	benchmark_output_file = open(benchmark_output_filename,'a')
-	# write the title of the section
-	benchmark_output_file.write('\n\n [NET_NAME: '+ net_name+'] \n')
 	# call the command for testing
+	
 	command = "valgrind --tool=cachegrind \
 		--cachegrind-out-file=" + cachegrind_out_file + "\
 		$RISTRETTOPATH/build/tools/caffe test \
 		-model=" + net + "\
 		-weights=" + weights + "\
 		-iterations=" + str(test_iterations)	
-	process = subprocess.Popen(command, shell=True, stdout = subprocess.PIPE)
-	process.wait()
-	benchmark_output_file.write('\n'.join(parser_filter(process.stdout)))
-	benchmark_output_file.close()
+	output = subprocess.check_output(command, shell=True,stderr=subprocess.STDOUT)
+	return NetPerformance(net,weights,cachegrind_out_file,output)
+
 
 if __name__ == "__main__":
 	# get the config file as parameter
@@ -111,10 +104,10 @@ if __name__ == "__main__":
 
 	# run the test through valgrind for the non compressed network
 	if performance:
-		test(solver_path, test_iterations,performance_path,benchmark_output_file)
+		test(solver_path, test_iterations,performance_path)
 		solver_reader = SolverReader(solver_path)
 		for compression_mode in ('dynamic_fixed_point', 'minifloat', 'integer_power_of_2_weights'):
 			if config['RISTRETTO'][compression_mode]:
 				fine_tune_solver = solver_reader.fineTuneSolverName(compression_mode)
-				test(fine_tune_solver, test_iterations,performance_path,benchmark_output_file)
+				test(fine_tune_solver, test_iterations,performance_path)
 

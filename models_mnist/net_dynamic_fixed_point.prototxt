@@ -56,11 +56,11 @@ layer {
     }
   }
   quantization_param {
-    bw_layer_in: 32
-    bw_layer_out: 32
+    bw_layer_in: 8
+    bw_layer_out: 8
     bw_params: 2
-    fl_layer_in: 32
-    fl_layer_out: 30
+    fl_layer_in: 8
+    fl_layer_out: 6
     fl_params: 2
   }
 }
@@ -98,11 +98,11 @@ layer {
     }
   }
   quantization_param {
-    bw_layer_in: 32
-    bw_layer_out: 32
+    bw_layer_in: 8
+    bw_layer_out: 8
     bw_params: 2
-    fl_layer_in: 30
-    fl_layer_out: 29
+    fl_layer_in: 6
+    fl_layer_out: 5
     fl_params: 4
   }
 }
@@ -138,12 +138,12 @@ layer {
     }
   }
   quantization_param {
-    bw_layer_in: 32
-    bw_layer_out: 32
-    bw_params: 4
-    fl_layer_in: 29
-    fl_layer_out: 29
-    fl_params: 6
+    bw_layer_in: 8
+    bw_layer_out: 8
+    bw_params: 8
+    fl_layer_in: 5
+    fl_layer_out: 5
+    fl_params: 10
   }
 }
 layer {
@@ -173,12 +173,12 @@ layer {
     }
   }
   quantization_param {
-    bw_layer_in: 32
-    bw_layer_out: 32
-    bw_params: 4
-    fl_layer_in: 29
-    fl_layer_out: 28
-    fl_params: 5
+    bw_layer_in: 8
+    bw_layer_out: 8
+    bw_params: 8
+    fl_layer_in: 5
+    fl_layer_out: 4
+    fl_params: 9
   }
 }
 layer {
