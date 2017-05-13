@@ -1,0 +1,50 @@
+[NET NAME: models_mnist/net.prototxt]
+
+test_time: 32.892
+caffemodel_size: 1725005
+I_refs: 579918849.0
+LL_refs: 6047116.0
+LLd_misses: 607187.0
+LL_rate: 0.1
+LLi_misses: 20446.0
+D_refs: 189444289.0
+I1_misses: 114665.0
+LLi_rate: 0.0
+cachegrind_output_file: models_mnist/perf/net_cachegrind.txt
+D1_misses: 5932451.0
+LLd_rate: 0.3
+D1_rate: 3.1
+compression_mode: None
+I1_rate: 0.02
+net: models_mnist/net.prototxt
+loss: 0.249072
+caffemodel: models_mnist/snapshot/_iter_100.caffemodel
+LL_misses: 627633.0
+accuracy: 0.94
+
+
+[NET NAME: models_mnist/net_integer_power_of_2_weights.prototxt]
+
+test_time: 63.114
+caffemodel_size: 1725161
+I_refs: 764064261.0
+LL_refs: 6188172.0
+LLd_misses: 643084.0
+LL_rate: 0.1
+LLi_misses: 21159.0
+D_refs: 238228950.0
+I1_misses: 116582.0
+LLi_rate: 0.0
+cachegrind_output_file: models_mnist/perf/net_integer_power_of_2_weights_cachegrind.txt
+D1_misses: 6071590.0
+LLd_rate: 0.3
+D1_rate: 2.5
+compression_mode: integer_power_of_2_weights
+I1_rate: 0.02
+net: models_mnist/net_integer_power_of_2_weights.prototxt
+loss: 0.295077
+caffemodel: models_mnist/snapshot/_integer_power_of_2_weights_iter_100.caffemodel
+LL_misses: 664243.0
+accuracy: 0.92
+
+

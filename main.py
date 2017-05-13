@@ -51,8 +51,9 @@ def fine_tune(solver_filename, compression_mode):
 #
 # obtain the name of the net and the name of the weights file
 # from the solver file and call valgrind 
+# need_to_test_time if need to call caffe time
 #
-def test(solver_filename, test_iterations,performance_path):
+def test(solver_filename, test_iterations,performance_path,need_to_test_time,compression_mode = None):
 	solver_reader = SolverReader(solver_filename)
 	net = solver_reader.solver.net
 	weights = solver_reader.weightsFilename()
@@ -71,7 +72,39 @@ def test(solver_filename, test_iterations,performance_path):
 		-weights=" + weights + "\
 		-iterations=" + str(test_iterations)	
 	output = subprocess.check_output(command, shell=True,stderr=subprocess.STDOUT)
-	return NetPerformance(net,weights,cachegrind_out_file,output)
+	test_time_val = None
+	if need_to_test_time:
+		test_time_val=evaluate_test_time(solver_filename,test_iterations)
+	return NetPerformance(net,weights,cachegrind_out_file,output,compression_mode,test_time_val)
+#
+# Test the inference time of the net and returns it
+#
+def evaluate_test_time(solver_filename,test_iterations):
+	solver_reader = SolverReader(solver_filename)
+	net = solver_reader.solver.net
+	weights = solver_reader.weightsFilename()
+	command = "$RISTRETTOPATH/build/tools/caffe time -model "+net+" \
+				-weights "+weights+ " -iterations " + str(test_iterations)
+	output = subprocess.check_output(command,shell=True,stderr=subprocess.STDOUT)
+	print output
+	# parse the output in order to get test time
+	lines = output.split("\n")
+	line = [x for x in lines if "Average Forward pass" in x][0]
+	test_time = line.split(" ")[len(line.split(" "))-2]
+	return float(test_time)
+#
+# writes the net list to the output file
+#
+def writeNetsToFile(net_list,outputfile):
+	output_folder = os.path.dirname(outputfile)
+	if not os.path.exists(outputfile):
+		os.mkdir(output_folder)
+	f = open(outputfile,'w')
+	for net in net_list:
+		f.write('[NET NAME: '+net.net+']\n\n')
+		f.write(str(net))
+		f.write("\n\n")
+	f.close()
 
 
 if __name__ == "__main__":
@@ -88,9 +121,12 @@ if __name__ == "__main__":
 	error_margin = config['RISTRETTO']['error_margin']
 	iterations = config['RISTRETTO']['iterations']
 	test_iterations = config['TEST']['iterations']
-	performance = config['TEST'].getboolean('performance')
+	cache_performance = config['TEST'].getboolean('cache_performance')
 	performance_path = config['TEST']['cachegrind_output_folder']
 	benchmark_output_file = config['TEST']['benchmark_output_file']
+	test_time = config['TEST'].getboolean('test_time')
+	# list of net performances in order to write into file
+	net_list = []
 
 	# train the input net
 	if to_train:
@@ -98,16 +134,17 @@ if __name__ == "__main__":
 
 	# compress the net with the modes in the ini file and fine tune
 	for compression_mode in ('dynamic_fixed_point', 'minifloat', 'integer_power_of_2_weights'):
-		if config['RISTRETTO'][compression_mode]:
+		if config['RISTRETTO'].getboolean(compression_mode):
 			compress(solver_path, compression_mode, error_margin, iterations)
 			fine_tune(solver_path, compression_mode)
 
 	# run the test through valgrind for the non compressed network
-	if performance:
-		test(solver_path, test_iterations,performance_path)
+	if cache_performance:
+		net_list.append(test(solver_path, test_iterations,performance_path,test_time))
 		solver_reader = SolverReader(solver_path)
 		for compression_mode in ('dynamic_fixed_point', 'minifloat', 'integer_power_of_2_weights'):
-			if config['RISTRETTO'][compression_mode]:
+			if config['RISTRETTO'].getboolean(compression_mode):
 				fine_tune_solver = solver_reader.fineTuneSolverName(compression_mode)
-				test(fine_tune_solver, test_iterations,performance_path)
-
+				net_list.append(test(fine_tune_solver, test_iterations,performance_path,test_time,compression_mode))
+		# write all nets to file
+		writeNetsToFile(net_list,benchmark_output_file)

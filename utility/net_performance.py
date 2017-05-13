@@ -9,26 +9,21 @@ parsing_dict = {'refs':['I','D','LL'],'misses':['I1','LLi','D1','LLd','LL'],'rat
 class NetPerformance:
 	net = None
 	caffemodel = None
-	caffemodelSize = None
+	caffemodel_size = None
 	accuracy = None
 	loss = None
-	i1_miss_rate = None
-	il_miss_rate = None
-	d1_miss_rate = None
-	dl_miss_rate = None
-	d_write = None
-	d1_miss_write = None
-	dl_miss_write = None
-	data_read = None
 	test_time = None
 	cachegrind_output_file = None
+	compression_mode = None
 
 # output info is the output of caffe test running into cachegrind, need to parse it
-	def __init__(self,net,caffemodel,cachegrind_output_file,output_info):
+	def __init__(self,net,caffemodel,cachegrind_output_file,output_info,compression_mode,test_time):
 		self.net = net
 		self.caffemodel = caffemodel
 		self.cachegrind_output_file = cachegrind_output_file
-		self.caffemodelSize = os.path.getsize(caffemodel)
+		self.caffemodel_size = os.path.getsize(caffemodel)
+		self.compression_mode = compression_mode
+		self.test_time = test_time
 		self.__parse__(output_info)
 		print str(self)
 
