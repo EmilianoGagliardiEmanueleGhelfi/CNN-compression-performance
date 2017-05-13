@@ -1,0 +1,13 @@
+test_iter: 100
+test_interval: 1000
+base_lr: 0.0010000000475
+display: 200
+max_iter: 10000
+lr_policy: "fixed"
+momentum: 0.899999976158
+weight_decay: 0.00400000018999
+snapshot: 5000
+snapshot_prefix: "models/cifar10/snapshot/_dynamic_fixed_point"
+solver_mode: CPU
+net: "models/cifar10/cifar10_full_train_test_dynamic_fixed_point.prototxt"
+snapshot_format: HDF5

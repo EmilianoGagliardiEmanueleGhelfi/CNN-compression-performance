@@ -7,6 +7,7 @@ import subprocess
 
 from utility.solver_reader import SolverReader
 from utility.net_performance import NetPerformance
+from utility.filter_utility import vis_square,weights_hist
 
 #
 # train the network, you will find the weights files as in the definition of the
@@ -106,6 +107,25 @@ def writeNetsToFile(net_list,outputfile):
 		f.write("\n\n")
 	f.close()
 
+#
+# Visualize the weights for the first convolutional layer
+#
+def vis_weights(solver_filename):
+	solver_reader = SolverReader(solver_filename)
+	model_def = solver_reader.solver.net
+	model_weights = solver_reader.weightsFilename()
+	net = caffe.Net(str(model_def),      # defines the structure of the model
+                str(model_weights),  # contains the trained weights
+                caffe.TEST)     # use test mode (e.g., don't perform dropout)
+	# the parameters are a list of [weights, biases]
+	filters = net.params['conv1'][0].data
+	#print filters.shape
+	vis_square(filters.transpose(0, 2, 3,1))
+	weights=[]
+	for layer_name,param in net.params.iteritems():
+		weights.extend(net.params[layer_name][0].data.flatten())
+	weights_hist(weights)
+
 
 if __name__ == "__main__":
 	# get the config file as parameter
@@ -148,3 +168,5 @@ if __name__ == "__main__":
 				net_list.append(test(fine_tune_solver, test_iterations,performance_path,test_time,compression_mode))
 		# write all nets to file
 		writeNetsToFile(net_list,benchmark_output_file)
+
+	vis_weights(solver_path)
