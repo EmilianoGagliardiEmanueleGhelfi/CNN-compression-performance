@@ -27,7 +27,7 @@ def compress(solver_filename, mode, error_margin=1, iterations=1000):
 	net = solver_reader.solver.net
 	max_iter = solver_reader.solver.max_iter
 	weights = solver_reader.weightsFilename()
-	output = solver_reader.compressionOutputFilename(mode)
+	output = solver_reader.compressionOutputFilename(mode, error_margin)
 	# build the ristretto command
 	command = os.environ['RISTRETTOPATH'] + "/build/tools/ristretto quantize" + "\
 		--model=" + net + "\
@@ -42,11 +42,11 @@ def compress(solver_filename, mode, error_margin=1, iterations=1000):
 #
 # create the new solver file and call train
 #
-def fine_tune(solver_filename, compression_mode):
+def fine_tune(solver_filename, compression_mode, error_margin):
 	# create a new solver file, equal to the input
 	# but with compressed network as target
 	solver_reader = SolverReader(solver_filename)
-	fine_tune_solver_file = solver_reader.createFineTuneSolverFile(compression_mode)
+	fine_tune_solver_file = solver_reader.createFineTuneSolverFile(compression_mode, error_margin)
 	train(fine_tune_solver_file)
 
 #
@@ -98,7 +98,7 @@ def evaluate_test_time(solver_filename,test_iterations):
 #
 def writeNetsToFile(net_list,outputfile):
 	output_folder = os.path.dirname(outputfile)
-	if not os.path.exists(outputfile):
+	if not os.path.exists(output_folder):
 		os.mkdir(output_folder)
 	f = open(outputfile,'w')
 	for net in net_list:
@@ -127,15 +127,10 @@ def vis_weights(solver_filename):
 	weights_hist(weights)
 
 
-if __name__ == "__main__":
-	# get the config file as parameter
-	arg_parser = argparse.ArgumentParser(description='TODO')#TODO
-	arg_parser.add_argument('ini_file', nargs=1, type = str)
-	args = arg_parser.parse_args()
-
+def main(inifile):
 	# parse the config file
 	config = configparser.ConfigParser()
-	config.read(args.ini_file[0])
+	config.read(inifile)
 	to_train = config['CAFFE'].getboolean('train')
 	solver_path = config['CAFFE']['solver_path']
 	error_margin = config['RISTRETTO']['error_margin']
@@ -143,7 +138,6 @@ if __name__ == "__main__":
 	test_iterations = config['TEST']['iterations']
 	cache_performance = config['TEST'].getboolean('cache_performance')
 	performance_path = config['TEST']['cachegrind_output_folder']
-	benchmark_output_file = config['TEST']['benchmark_output_file']
 	test_time = config['TEST'].getboolean('test_time')
 	# list of net performances in order to write into file
 	net_list = []
@@ -156,7 +150,7 @@ if __name__ == "__main__":
 	for compression_mode in ('dynamic_fixed_point', 'minifloat', 'integer_power_of_2_weights'):
 		if config['RISTRETTO'].getboolean(compression_mode):
 			compress(solver_path, compression_mode, error_margin, iterations)
-			fine_tune(solver_path, compression_mode)
+			fine_tune(solver_path, compression_mode, error_margin)
 
 	# run the test through valgrind for the non compressed network
 	if cache_performance:
@@ -164,9 +158,19 @@ if __name__ == "__main__":
 		solver_reader = SolverReader(solver_path)
 		for compression_mode in ('dynamic_fixed_point', 'minifloat', 'integer_power_of_2_weights'):
 			if config['RISTRETTO'].getboolean(compression_mode):
-				fine_tune_solver = solver_reader.fineTuneSolverName(compression_mode)
-				net_list.append(test(fine_tune_solver, test_iterations,performance_path,test_time,compression_mode))
-		# write all nets to file
-		writeNetsToFile(net_list,benchmark_output_file)
+				fine_tune_solver = solver_reader.fineTuneSolverName(compression_mode, error_margin)
+				net_list.append(test(fine_tune_solver, test_iterations, performance_path, test_time, compression_mode))
+	return net_list
 
-	vis_weights(solver_path)
+if __name__=='__main__':
+	# get the config file as parameter
+	arg_parser = argparse.ArgumentParser(description='TODO')#TODO
+	arg_parser.add_argument('ini_file', nargs=1, type = str)
+	args = arg_parser.parse_args()
+	net_list = main(args.ini_file[0])
+
+	# write all nets to file
+	config = configparser.ConfigParser()
+	config.read(inifile)
+	benchmark_output_file = config['TEST']['benchmark_output_file']
+	writeNetsToFile(net_list, benchmark_output_file)

@@ -25,14 +25,14 @@ class SolverReader:
 			out_format = ".h5"
 		return snapshot_prefix + '_iter_' + str(max_iter) + '.caffemodel'+out_format
 
-	def compressionOutputFilename(self, compression_mode):
+	def compressionOutputFilename(self, compression_mode, error_margin):
 		"""
 		convention to define names of the compressed network
 		"""
 		net = self.solver.net
-		return net.split('.')[0] + '_' + compression_mode + '.prototxt'
+		return net.split('.')[0] + '_' + compression_mode + '_err_margin_' + str(error_margin).replace('.', '') + '.prototxt'
 
-	def createFineTuneSolverFile(self, compression_mode):
+	def createFineTuneSolverFile(self, compression_mode, error_margin):
 		"""
 		create a new file solver for the compressed network with the 
 		adopted convention and return the filename
@@ -41,13 +41,13 @@ class SolverReader:
 		f = open(self.solver_path, 'r')
 		Merge(f.read(), new_solver) # new_solver is a clone of self.solver
 		# change the solver file
-		new_solver.net = self.compressionOutputFilename(compression_mode)
-		new_solver.snapshot_prefix += '_' + compression_mode
-		filename = self.fineTuneSolverName(compression_mode)
+		new_solver.net = self.compressionOutputFilename(compression_mode, error_margin)
+		new_solver.snapshot_prefix += '_' + compression_mode + '_err_margin_' + str(error_margin).replace('.', '')
+		filename = self.fineTuneSolverName(compression_mode, error_margin)
 		new_solver_file = open(filename, 'w')
 		new_solver_file.write(MessageToString(new_solver))
 		new_solver_file.close()
 		return filename
 
-	def fineTuneSolverName(self, compression_mode):
-		return self.solver_path.split('.')[0] + '_' + compression_mode + '.prototxt'
+	def fineTuneSolverName(self, compression_mode, error_margin):
+		return self.solver_path.split('.')[0] + '_' + compression_mode + '_err_margin_' + str(error_margin).replace('.', '') +'.prototxt'
