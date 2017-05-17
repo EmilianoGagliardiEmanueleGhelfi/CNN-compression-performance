@@ -159,7 +159,9 @@ def main(inifile):
 		for compression_mode in ('dynamic_fixed_point', 'minifloat', 'integer_power_of_2_weights'):
 			if config['RISTRETTO'].getboolean(compression_mode):
 				fine_tune_solver = solver_reader.fineTuneSolverName(compression_mode, error_margin)
-				net_list.append(test(fine_tune_solver, test_iterations, performance_path, test_time, compression_mode))
+				net_tested = test(fine_tune_solver, test_iterations, performance_path, test_time, compression_mode)
+				net_tested.error_margin = error_margin
+				net_list.append(net_tested)
 	return net_list
 
 if __name__=='__main__':

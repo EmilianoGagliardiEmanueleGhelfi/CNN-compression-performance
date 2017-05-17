@@ -15,6 +15,7 @@ class NetPerformance:
 	test_time = None
 	cachegrind_output_file = None
 	compression_mode = None
+	error_margin = None
 
 # output info is the output of caffe test running into cachegrind, need to parse it
 	def __init__(self,net,caffemodel,cachegrind_output_file,output_info,compression_mode,test_time):

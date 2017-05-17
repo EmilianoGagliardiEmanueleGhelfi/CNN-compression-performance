@@ -9,6 +9,6 @@ power: 0.75
 momentum: 0.899999976158
 weight_decay: 0.000500000023749
 snapshot: 5000
-snapshot_prefix: "models/mnist/snapshot/_dynamic_fixed_point_err_margin_10"
+snapshot_prefix: "models/mnist/snapshot/_integer_power_of_2_weights_err_margin_25"
 solver_mode: CPU
-net: "models/mnist/net_dynamic_fixed_point_err_margin_10.prototxt"
+net: "models/mnist/net_integer_power_of_2_weights_err_margin_25.prototxt"
