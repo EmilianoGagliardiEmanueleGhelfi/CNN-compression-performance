@@ -46,3 +46,22 @@ for comp_mode in netmap.keys():
 	all_nets.append(netmap[compression_mode])
 
 # plot the obtained results
+# in this map the first array is the x, while the second is the y in the plot
+perf_map ={'dynamic_fixed_point':[[],[],[]],'minifloat':[[],[],[]],'integer_power_of_2_weights':[[],[],[]]}
+for net in netmap.itervalues():
+	perf_map[net.compression_mode][0].append(net.error_margin)
+	perf_map[net.compression_mode][1].append(net.caffemodel_size)
+	perf_map[net.compression_mode][2].append(net.accuracy)
+
+for key in perf_map.keys():	
+	plt.figure(1)
+	plt.subplot(211)
+	plt.plot(perf_map[key][0],perf_map[1],label=key)
+	plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3, ncol=2, mode="expand", borderaxespad=0.)
+	plt.subplot(212)
+	plt.plot(perf_map[key][0],perf_map[2],label=key)
+	plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3, ncol=2, mode="expand", borderaxespad=0.)
+
+plt.show()
+
+
