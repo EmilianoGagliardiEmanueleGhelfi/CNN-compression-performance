@@ -19,8 +19,9 @@ class SolverReader:
 		snapshot_prefix = self.solver.snapshot_prefix
 		max_iter = self.solver.max_iter
 		# fix for output format of caffe, need to test it
-		out_format = None
-		if not self.solver.snapshot_format is None and self.solver.snapshot_format=="HDF5":
+		out_format = ""
+		# snaphot format is an enumTypeWrapper (0 is HDF5 and 1 is BINARYPROTO)
+		if (not self.solver.snapshot_format is None) and self.solver.snapshot_format==self.solver.SnapshotFormat.Value('HDF5'):
 			out_format = ".h5"
 		return snapshot_prefix + '_iter_' + str(max_iter) + '.caffemodel'+out_format
 
