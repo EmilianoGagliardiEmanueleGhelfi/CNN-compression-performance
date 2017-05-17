@@ -4,13 +4,13 @@ For real world application, convolutional neural network(CNN) model can take mor
 
 # How to use
 
-Write your path to ristretto executable in the environment variable RISTRETTOPATH
+- Write your path to ristretto executable in the environment variable RISTRETTOPATH
 
 ```
 export RISTRETTOPATH=path/to/ristretto/executable
 ```
 
-Install valgrind
+- Install valgrind
 
 ```
 sudo apt-get install valgrind
@@ -20,7 +20,7 @@ sudo apt-get install valgrind
 - The network protofile have to contain the absolute path to the dataset or the relative from the current working directory
 - in the solver protofile the path to the network and the snapshot prefix have to be respect to the current working directory
 
-Run
+- Run
 
 ```
 python main.py config.ini
