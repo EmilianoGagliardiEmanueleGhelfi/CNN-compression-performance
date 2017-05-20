@@ -103,7 +103,7 @@ layer {
     bw_layer_in: 8
     bw_layer_out: 8
     fl_layer_in: 6
-    fl_layer_out: 6
+    fl_layer_out: 4
     exp_min: -8
     exp_max: -1
   }
@@ -143,8 +143,8 @@ layer {
     precision: INTEGER_POWER_OF_2_WEIGHTS
     bw_layer_in: 8
     bw_layer_out: 8
-    fl_layer_in: 6
-    fl_layer_out: 7
+    fl_layer_in: 4
+    fl_layer_out: 4
     exp_min: -8
     exp_max: -1
   }
@@ -179,8 +179,8 @@ layer {
     precision: INTEGER_POWER_OF_2_WEIGHTS
     bw_layer_in: 8
     bw_layer_out: 8
-    fl_layer_in: 7
-    fl_layer_out: 8
+    fl_layer_in: 4
+    fl_layer_out: 3
     exp_min: -8
     exp_max: -1
   }

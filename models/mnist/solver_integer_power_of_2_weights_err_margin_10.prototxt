@@ -2,7 +2,7 @@ test_iter: 10
 test_interval: 500
 base_lr: 0.00999999977648
 display: 100
-max_iter: 1
+max_iter: 10000
 lr_policy: "inv"
 gamma: 9.99999974738e-05
 power: 0.75

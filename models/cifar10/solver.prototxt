@@ -1,4 +1,4 @@
-net: "train_val.prototxt"
+net: "models/cifar10/train_val.prototxt"
 test_iter: 100
 test_interval: 500
 base_lr: 0.1
@@ -8,7 +8,7 @@ lr_policy: "step"
 gamma: 0.1
 stepsize: 100000
 display: 100
-max_iter: 120000
-snapshot: 10000
-snapshot_prefix: "snapshot/cifar10_nin"
-solver_mode: GPU
+max_iter: 5000
+snapshot: 2500
+snapshot_prefix: "models/cifar10/snapshot/cifar10_nin"
+solver_mode: CPU

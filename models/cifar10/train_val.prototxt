@@ -5,8 +5,9 @@ layers {
   top: "data"
   top: "label"
   data_param {
-    source: "cifar-train-leveldb"
+    source: "dataset/cifar10/cifar10_train_lmdb"
     batch_size: 128
+    backend: LMDB
   }
   include: { phase: TRAIN }
 }
@@ -16,8 +17,9 @@ layers {
   top: "data"
   top: "label"
   data_param {
-    source: "cifar-test-leveldb"
+    source: "dataset/cifar10/cifar10_test_lmdb"
     batch_size: 100
+    backend: LMDB
   }
   include: { phase: TEST }
 }
