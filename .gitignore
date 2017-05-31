@@ -1,3 +1,6 @@
 **.save
 /dataset/*
 **.pyc
+.idea/
+.DS_Store
+
