@@ -38,6 +38,8 @@ class MnistNetwork:
         self.net_name = 'mnist_network'
         self.checkpoint_prefix = self.checkpoint_path + '/' + self.net_name
         self.output_graph_name = 'mnist_models/models/output_graph.pb'
+        self.quantized_graph_name = 'mnist_models/models/quantized_graph.pb'
+        self.accuracy_node_name = 'accuracy'
 
     """
     The model and the training method is defined as implementation of the inference, loss, training pattern
@@ -77,8 +79,7 @@ class MnistNetwork:
         W_fc2 = weight_variable([1024, 10])
         b_fc2 = bias_variable([10])
 
-        y_conv = tf.matmul(h_fc1, W_fc2) + b_fc2
-        y_conv = tf.identity(y_conv, name=self.output_name)
+        y_conv = tf.add(tf.matmul(h_fc1, W_fc2),b_fc2,name=self.output_name)
 
         return x, y_conv, y_
 
@@ -111,7 +112,7 @@ class MnistNetwork:
         :return: the accuracy node
         """
         correct_prediction = tf.equal(tf.argmax(output, 1), tf.argmax(labels, 1))
-        accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+        accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32),name=self.accuracy_node_name)
         return accuracy
 
     """
@@ -175,3 +176,5 @@ class MnistNetwork:
                                   input_binary, input_checkpoint_path,
                                   output_node_names, restore_op_name,
                                   filename_tensor_name, output_graph_name, clear_devices, "")
+
+        
