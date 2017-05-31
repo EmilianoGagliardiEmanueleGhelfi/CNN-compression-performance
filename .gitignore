@@ -1,3 +1,4 @@
 **.save
-/dataset/*
+**/dataset/*
 **.pyc
+**.idea
