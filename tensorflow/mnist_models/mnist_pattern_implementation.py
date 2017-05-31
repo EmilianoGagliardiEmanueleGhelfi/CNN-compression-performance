@@ -35,7 +35,8 @@ class MnistNetwork:
         self.output_name = 'output'
         self.label_name = 'label'
         self.checkpoint_path = 'mnist_models/models'
-        self.checkpoint_prefix = self.checkpoint_path + '/mnist_network'
+        self.net_name = 'mnist_network'
+        self.checkpoint_prefix = self.checkpoint_path + '/' + self.net_name
         self.output_graph_name = 'mnist_models/models/output_graph.pb'
 
     """
@@ -135,16 +136,22 @@ class MnistNetwork:
         :return: None 
         """
         saver = tf.train.Saver()
-        iterations = 1000
+        iterations = 1
         # initialize the variables
         self.sess.run(tf.global_variables_initializer())
         # training iterations
         for i in range(iterations + 1):
             batch = self.dataset.train.next_batch(100)
-            train_acc = self.sess.run(fetches=self.train_step, feed_dict={self.input: batch[0], self.label: batch[1]})
+            self.sess.run(fetches=self.train_step, feed_dict={self.input: batch[0], self.label: batch[1]})
+
+            # evaluate and print the train accuracy
             if i % 100 == 0:
+                train_acc = self.sess.run(fetches=self.test_step, feed_dict={self.input: batch[0], self.label: batch[1]})
                 print ('Step %d train accuracy %g' % (i, train_acc))
-        saver.save(self.sess, self.checkpoint_prefix)
+        # training finished, export model
+        saver.save(self.sess, self.checkpoint_prefix, meta_graph_suffix='pb')
+        # saver.export_meta_graph(model_name, as_text=True)
+        tf.train.write_graph(self.sess.graph.as_graph_def(), self.checkpoint_path, self.net_name + '.pb')
 
     def evaluate(self):
         accuracy = self.sess.run(self.test_step,

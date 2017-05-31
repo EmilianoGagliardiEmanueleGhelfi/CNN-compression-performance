@@ -11,7 +11,7 @@ def main():
     model.train()
     print model.evaluate()
 
-    print "Now I'll try to export everything, guess me luck!"
+    print "Now I'll try to export everything, wish me luck!"
     model.export_to_pb()
 
 
