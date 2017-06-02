@@ -3,3 +3,4 @@
 **.pyc
 **.idea
 .DS_Store
+**/MNIST_data/*

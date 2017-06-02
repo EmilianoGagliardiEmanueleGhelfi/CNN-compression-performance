@@ -29,6 +29,8 @@ class MnistNetwork:
         self.input = None
         self.output = None
         self.label = None
+        self.test_data = None
+        self.test_labels = None
         self.train_step = None
         self.test_step = None
         self.sess = tf.Session()
@@ -125,6 +127,8 @@ class MnistNetwork:
         operation that obtains data and create the computation graph
         """
         self.dataset = input_data.read_data_sets('MNIST_data', one_hot=True)
+        self.test_data = self.dataset.test.images
+        self.test_label = self.dataset.test.labels
         self.input, self.output, self.label = self._inference()
         loss_node = self._loss(self.label, self.output)
         self.train_step = self._train(loss_node)
