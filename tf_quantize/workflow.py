@@ -20,12 +20,12 @@ def quantize(model):
     quantize takes the model of the net. output graph name is the output of the method freeze.
     output name is the name of the output node of the net
     quantized graph name is the output of the method quantize.
-    requires an env variable pointing to the tensorflow home
+    requires an env variable pointing to the tensorflow home like ~/dev/tensorflow
     :param model: the net implementing the abstract class
     """
     quantize_command = os.environ['TF_HOME'] + '/bazel-bin/tensorflow/tools/quantization/quantize_graph \
   --input=' + model.output_pb_path + ' \
-  --output_node_names="' + model.output_name + '" --output=' + model.output_quantized_graph + ' \
+  --output_node_names="' + model.output_node_name + '" --output=' + model.output_quantized_graph + ' \
   --mode=eightbit'
     process = subprocess.Popen(quantize_command, shell=True, stdout=subprocess.PIPE)
     process.wait()
@@ -148,6 +148,7 @@ def restore(meta_graph_path, model):
     :return: a triple (ouput_node,input_placeholder,label_placeholder
     """
     # take the graph
+    print meta_graph_path
     saver = tf.train.import_meta_graph(meta_graph_path)
     graph = tf.get_default_graph()
     # access placeholder

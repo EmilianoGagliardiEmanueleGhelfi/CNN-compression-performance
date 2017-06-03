@@ -31,7 +31,8 @@ class MnistNetwork(ToBeQuantizedNetwork):
     output_node_name = 'output'
 
     # properties needed to export to pb in workflow. We put checkpoint data, meta graph
-    checkpoint_prefix = 'mnist_models/models'
+    checkpoint_prefix = 'mnist_models/models/net'
+    checkpoint_path = 'mnist_models/models'
     metagraph_path = 'mnist_models/models/metagraph.pb'
     output_pb_path = 'mnist_models/models/output_graph.pb'
     output_quantized_graph = 'mnist_models/models/quantized_graph.pb'
@@ -143,4 +144,4 @@ class MnistNetwork(ToBeQuantizedNetwork):
         # export the metagraph, first need to obtain the file name of the meta graph from the total path defined as
         # property
         metagraph_filename = self.metagraph_path.split('/')[len(self.metagraph_path.split('/')) - 1]
-        tf.train.write_graph(self._sess.graph.as_graph_def(), self.checkpoint_prefix, metagraph_filename)
+        tf.train.write_graph(self._sess.graph.as_graph_def(), self.checkpoint_path, metagraph_filename)

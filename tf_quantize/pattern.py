@@ -65,6 +65,13 @@ class ToBeQuantizedNetwork:
         pass
 
     @abstractproperty
+    def checkpoint_path(self):
+        """
+        The path containing checkpoint and models
+        """
+        pass
+
+    @abstractproperty
     def metagraph_path(self):
         """
         The path to the meta graph obtained by the network: after the network computational graph have been created
