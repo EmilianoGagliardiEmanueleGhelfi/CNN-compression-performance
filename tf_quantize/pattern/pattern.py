@@ -16,6 +16,14 @@ class ToBeQuantizedNetwork:
     Properties needed to run the test of the quantized network
     """
 
+
+    @abstractproperty
+    def net_name(self):
+        """
+        name of the network
+        """
+        pass
+
     @abstractproperty
     def test_iterations(self):
         """
@@ -61,6 +69,13 @@ class ToBeQuantizedNetwork:
     def checkpoint_prefix(self):
         """
         The path passed to save for saving the session: after the training of the network save the data with saver.save
+        """
+        pass
+
+    @abstractproperty
+    def checkpoint_path(self):
+        """
+        The path containing checkpoint and models
         """
         pass
 
