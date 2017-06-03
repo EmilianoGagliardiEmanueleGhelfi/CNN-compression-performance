@@ -1,6 +1,6 @@
 import tensorflow as tf
 from tensorflow.examples.tutorials.mnist import input_data
-from pattern.pattern import ToBeQuantizedNetwork
+from tf_quantize.pattern.pattern import ToBeQuantizedNetwork
 
 
 def weight_variable(shape):
@@ -29,7 +29,7 @@ class MnistNetwork(ToBeQuantizedNetwork):
     input_placeholder_name = 'input'
     label_placeholder_name = 'label'
     output_node_name = 'output'
-    net_name ="mnist_net"
+    net_name = "mnist_net"
 
     # properties needed to export to pb in workflow. We put checkpoint data, meta graph
     checkpoint_prefix = 'mnist_models/models/net'

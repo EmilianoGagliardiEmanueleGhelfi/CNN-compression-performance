@@ -124,3 +124,6 @@ class ToBeQuantizedNetwork:
         This methods contains the training algorithm, that uses the training node defined in prepare
         """
         pass
+
+    def auto_factory(self):
+        return self.__init__()

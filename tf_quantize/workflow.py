@@ -1,13 +1,18 @@
-"""
-This script takes as input a script that defines a cnn, following the prepare, train, evaluate pattern.
-"""
-
-import mnist_models.mnist_pattern_implementation as e
+import argparse
 import subprocess, signal, platform, os
 from net_perf.NetPerformance import NetPerformance
 from datetime import datetime
 import tensorflow as tf
 from tensorflow.python.tools import freeze_graph
+import importlib
+
+help = 'This script takes as input a cnn implemented using tensorflow. The network have to be defined like the in the' \
+       'example file mnist_patter_implemementation.py, extending the ToBeQuantizedNetwork abstract class in ' \
+       'pattern.py. It calls the prepare and train methods on the network. The implementation of the network need ' \
+       'also to export the variables and the metagraph in the training method using the tf api. This script then take ' \
+       'the files and obtains a pb file description of the network, needed to quantize it. The net is quantized and ' \
+       'then the performance of the original network and the quantized one are compared in terms of accuracy, ' \
+       'execution time, and cache misses.'
 
 # performance events
 perf_ev_list = ['cache-misses', 'cache-references', 'L1-dcache-load-misses', 'L1-dcache-loads', 'L1-dcache-stores',
@@ -138,8 +143,8 @@ def evaluate(output_node, test_data, labels, input_placeholder_node, label_place
         correct_prediction = tf.equal(tf.argmax(output_node, 1), tf.argmax(labels, 1))
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
         acc = sess.run(accuracy,
-                                 feed_dict={input_placeholder_node: test_data,
-                                            label_placeholder_node: labels})
+                       feed_dict={input_placeholder_node: test_data,
+                                  label_placeholder_node: labels})
         return acc
 
 
@@ -163,25 +168,24 @@ def restore(meta_graph_path, model):
     # current default Graph
     with tf.Graph().as_default() as graph:
         tf.import_graph_def(
-            graph_def, 
-            input_map=None, 
-            return_elements=None, 
-            op_dict=None, 
+            graph_def,
+            input_map=None,
+            return_elements=None,
+            op_dict=None,
             name="prefix",
             producer_op_list=None
         )
-    
+
         # access placeholder
-        input_placeholder = graph.get_tensor_by_name("prefix/"+model.input_placeholder_name+":0")
+        input_placeholder = graph.get_tensor_by_name("prefix/" + model.input_placeholder_name + ":0")
         # create label placeholder
         label_placeholder = tf.placeholder(tf.float32, shape=[None, 10], name="labels")
         # get output node
-        output_node = graph.get_tensor_by_name("prefix/"+model.output_node_name+":0")
-        return output_node, input_placeholder, label_placeholder,graph
+        output_node = graph.get_tensor_by_name("prefix/" + model.output_node_name + ":0")
+        return output_node, input_placeholder, label_placeholder, graph
 
 
-def main():
-    model = e.MnistNetwork()
+def main(model):
     model.prepare()
     model.train()
     print "Exporting the graph"
@@ -201,4 +205,12 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description=help)
+    parser.add_argument('module_name', type=str, nargs=1, help='python file containig an implementation of '
+                                                               'ToBeQuantizedNetwork')
+    parser.add_argument('class_name', type=str, nargs=1, help='the name of the class')
+    args = parser.parse_args()
+    user_module = importlib.import_module(args.module_name[0])
+    user_class = getattr(user_module, args.class_name[0])
+    model_instance = user_class()
+    main(model_instance)
