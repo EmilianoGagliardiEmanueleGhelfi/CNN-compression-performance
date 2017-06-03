@@ -1,4 +1,3 @@
-
 import tensorflow as tf
 from tensorflow.examples.tutorials.mnist import input_data
 from tensorflow.python.tools import freeze_graph
@@ -23,26 +22,27 @@ def max_pool_2x2(x):
                           strides=[1, 2, 2, 1], padding='SAME')
 
 
-class MnistNetwork:
+class MnistNetwork():
+    # properties needed to evaluate the quantized network in workflow
+    test_iterations = 1
+    test_data = None  # initialized in prepare, tuple with input, labels
+    input_placeholder_name = 'input'
+    label_placeholder_name = 'label'
+    output_node_name = 'output'
+
+    # properties needed to export to pb in workflow. We put checkpoint data, meta graph
+    checkpoint_prefix = 'mnist_models/models'
+    metagraph_path = 'mnist_models/models/metagraph.pb'
+    output_pb_path = 'mnist_models/models/output_graph.pb'
+    output_quantized_graph = 'mnist_models/models/quantized_graph.pb'
+
     def __init__(self):
-        self.dataset = None
-        self.input = None
-        self.output = None
-        self.label = None
-        self.test_data = None
-        self.test_labels = None
-        self.train_step = None
-        self.test_step = None
-        self.sess = tf.Session()
-        self.input_name = 'input'
-        self.output_name = 'output'
-        self.label_name = 'label'
-        self.checkpoint_path = 'mnist_models/models'
-        self.net_name = 'mnist_network'
-        self.checkpoint_prefix = self.checkpoint_path + '/' + self.net_name
-        self.output_graph_name = 'mnist_models/models/output_graph.pb'
-        self.quantized_graph_name = 'mnist_models/models/quantized_graph.pb'
-        self.accuracy_node_name = 'accuracy'
+        self._dataset = None
+        self._input_placeholder = None
+        self._output_placeholder = None
+        self._label_placeholder = None
+        self._train_step_node = None
+        self._sess = tf.Session()
 
     """
     The model and the training method is defined as implementation of the inference, loss, training pattern
@@ -53,8 +53,8 @@ class MnistNetwork:
         Builds the graph as far as is required for running the model forward to make predictions
         :return: input placeholder, output, label placeholder
         """
-        x = tf.placeholder(tf.float32, shape=[None, 784], name=self.input_name)
-        y_ = tf.placeholder(tf.float32, shape=[None, 10], name=self.label_name)
+        x = tf.placeholder(tf.float32, shape=[None, 784], name=self.input_placeholder_name)
+        y_ = tf.placeholder(tf.float32, shape=[None, 10], name=self.label_placeholder_name)
 
         # create the layers
 
@@ -82,7 +82,7 @@ class MnistNetwork:
         W_fc2 = weight_variable([1024, 10])
         b_fc2 = bias_variable([10])
 
-        y_conv = tf.add(tf.matmul(h_fc1, W_fc2),b_fc2,name=self.output_name)
+        y_conv = tf.add(tf.matmul(h_fc1, W_fc2), b_fc2, name=self.output_node_name)
 
         return x, y_conv, y_
 
@@ -103,20 +103,8 @@ class MnistNetwork:
         :param loss_node: the loss function node
         :return: the gradient descent node
         """
-        # gradient descent with step 0.5
         train_step = tf.train.AdamOptimizer(1e-4).minimize(loss_node)
         return train_step
-
-    def _test(self, labels, output):
-        """
-        Adds to the graph the ops required to compute the accuracy
-        :param labels: the placeholder in the graph for the labels
-        :param output: the output node of the model
-        :return: the accuracy node
-        """
-        correct_prediction = tf.equal(tf.argmax(output, 1), tf.argmax(labels, 1))
-        accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32),name=self.accuracy_node_name)
-        return accuracy
 
     """
     from here there is the implementation of the prepare, train, evaluate pattern
@@ -126,60 +114,33 @@ class MnistNetwork:
         """
         operation that obtains data and create the computation graph
         """
-        self.dataset = input_data.read_data_sets('MNIST_data', one_hot=True)
-        self.test_data = self.dataset.test.images
-        self.test_label = self.dataset.test.labels
-        self.input, self.output, self.label = self._inference()
-        loss_node = self._loss(self.label, self.output)
-        self.train_step = self._train(loss_node)
-        self.test_step = self._test(self.label, self.output)
+        self._dataset = input_data.read_data_sets('MNIST_data', one_hot=True)
+        # assign the test dataset that will be used by the workflow to test this and the quantized net
+        self.test_data = (self._dataset.test.images, self._dataset.test.labels)
+        self._input_placeholder, self._output_placeholder, self._label_placeholder = self._inference()
+        loss_node = self._loss(self._label_placeholder, self._output_placeholder)
+        self._train_step_node = self._train(loss_node)
 
     def train(self):
         """
         train the network 
-        export checkpoints and the metagraph description 
-        
-        :return: None 
+        export checkpoints and the metagraph description
         """
-        saver = tf.train.Saver()
         iterations = 1
         # initialize the variables
-        self.sess.run(tf.global_variables_initializer())
+        self._sess.run(tf.global_variables_initializer())
         # training iterations
         for i in range(iterations + 1):
-            batch = self.dataset.train.next_batch(100)
-            self.sess.run(fetches=self.train_step, feed_dict={self.input: batch[0], self.label: batch[1]})
+            batch = self._dataset.train.next_batch(100)
+            self._sess.run(fetches=self._train_step_node,
+                           feed_dict={self._input_placeholder: batch[0], self._label_placeholder: batch[1]})
+        self._save()
 
-            # evaluate and print the train accuracy
-            if i % 100 == 0:
-                train_acc = self.sess.run(fetches=self.test_step, feed_dict={self.input: batch[0], self.label: batch[1]})
-                print ('Step %d train accuracy %g' % (i, train_acc))
-        # training finished, export model
-        saver.save(self.sess, self.checkpoint_prefix, meta_graph_suffix='pb')
-        # saver.export_meta_graph(model_name, as_text=True)
-        tf.train.write_graph(self.sess.graph.as_graph_def(), self.checkpoint_path, self.net_name + '.pb')
-
-    def evaluate(self):
-        accuracy = self.sess.run(self.test_step,
-                                 feed_dict={self.input: self.dataset.test.images,
-                                            self.label: self.dataset.test.labels})
-        return accuracy
-
-    def export_to_pb(self):
-        input_graph_name = self.checkpoint_prefix + '.pb'
-        output_graph_name = self.output_graph_name
-
-        input_saver_def_path = ""
-        input_binary = False
-        input_checkpoint_path = self.checkpoint_prefix  # maybe need to add iterations number
-        output_node_names = self.output_name
-        restore_op_name = tf.train.latest_checkpoint(self.checkpoint_prefix)
-        filename_tensor_name = "save/Const:0"
-        clear_devices = True
-
-        freeze_graph.freeze_graph(input_graph_name, input_saver_def_path,
-                                  input_binary, input_checkpoint_path,
-                                  output_node_names, restore_op_name,
-                                  filename_tensor_name, output_graph_name, clear_devices, "")
-
-        
+    def _save(self):
+        saver = tf.train.Saver()
+        # export checkpoint variables
+        saver.save(self._sess, self.checkpoint_prefix, meta_graph_suffix='pb')
+        # export the metagraph, first need to obtain the file name of the meta graph from the total path defined as
+        # property
+        metagraph_filename = self.metagraph_path.split('/')[len(self.metagraph_path.split('/')) - 1]
+        tf.train.write_graph(self._sess.graph.as_graph_def(), self.checkpoint_prefix, metagraph_filename)

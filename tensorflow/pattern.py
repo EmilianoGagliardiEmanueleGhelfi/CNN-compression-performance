@@ -60,14 +60,15 @@ class ToBeQuantizedNetwork:
     @abstractproperty
     def checkpoint_prefix(self):
         """
-        The path passed to save for saving the session
+        The path passed to save for saving the session: after the training of the network save the data with saver.save
         """
         pass
 
     @abstractproperty
     def metagraph_path(self):
         """
-        The path to the metagraph obtained by the network
+        The path to the meta graph obtained by the network: after the network computational graph have been created
+        export it with tf.train.write_graph()
         """
         pass
 
@@ -86,18 +87,9 @@ class ToBeQuantizedNetwork:
         """
         pass
 
-
     """
     End of properties
     """
-
-    @abstractmethod
-    def export_nodes(self):
-        """
-        This method exports with tf.collection the input and label placeholders and the output and the accuracy node.
-        They will be imported by the workflow script to perform the tests
-        """
-        pass
 
     """
     prepare, train
