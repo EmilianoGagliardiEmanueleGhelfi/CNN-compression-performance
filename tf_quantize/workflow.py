@@ -121,18 +121,20 @@ def get_model_perf(function_to_call, net_name, test_data, *args):
     print net_perf
 
 
-def evaluate(output_node, test_data, labels, input_placeholder_node, label_placeholder_node,graph):
+def evaluate(output_node, test_data, labels, input_placeholder_node, label_placeholder_node, graph):
     """
-    Takes a graph as input, attaches an accuracy node and evaluates it
+    Takes a graph as input, attaches an accuracy node and evaluates it. Notice that the tensor must be created
+    in the same graph of output node, with graph.as_default()
     :param output_node output node of the net, used for accuracy
     :param labels is the tensor containing labels of test data
     :param input_placeholder_node node used for placeholder for input
     :param label_placeholder_node node used as placeholder for labels
     :param test_data test images
+    :param graph is the graph of the output node
     :return: the accuracy of the net
     """
     with graph.as_default():
-        sess = tf.Session(graph = graph)
+        sess = tf.Session(graph=graph)
         correct_prediction = tf.equal(tf.argmax(output_node, 1), tf.argmax(labels, 1))
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
         acc = sess.run(accuracy,
@@ -143,14 +145,15 @@ def evaluate(output_node, test_data, labels, input_placeholder_node, label_place
 
 def restore(meta_graph_path, model):
     """
-    Takes a pb path of a freezed graph and restores it. :0 after the name is to get the first of the list (?)
+    Takes a pb path of a freezed graph and restores it. :0 after the name is to get the first of the list. Graph is
+    needed because tensor must belong to the same graph.
+    #TODO Label placehoder are created directly here, we must be
+    parametric in some way...
     :param model is an instance of the abstract class
     :param meta_graph_path is the path of the freezed graph
-    :return: a triple (ouput_node,input_placeholder,label_placeholder
+    :return: (ouput_node,input_placeholder,label_placeholder,graph)
     """
-    # take the graph
-    print meta_graph_path
-     # We load the protobuf file from the disk and parse it to retrieve the 
+    # We load the protobuf file from the disk and parse it to retrieve the
     # unserialized graph_def
     with tf.gfile.GFile(meta_graph_path, "rb") as f:
         graph_def = tf.GraphDef()
@@ -170,7 +173,9 @@ def restore(meta_graph_path, model):
     
         # access placeholder
         input_placeholder = graph.get_tensor_by_name("prefix/"+model.input_placeholder_name+":0")
+        # create label placeholder
         label_placeholder = tf.placeholder(tf.float32, shape=[None, 10], name="labels")
+        # get output node
         output_node = graph.get_tensor_by_name("prefix/"+model.output_node_name+":0")
         return output_node, input_placeholder, label_placeholder,graph
 
@@ -185,12 +190,12 @@ def main():
     # quantize the trained model
     quantize(model)
     # restore the real model
-    output_node, input_placeholder, label_placeholder,graph = restore(model.output_pb_path, model)
+    output_node, input_placeholder, label_placeholder, graph = restore(model.output_pb_path, model)
     # get performance of the model
     get_model_perf(evaluate, model.net_name, model.test_data[0], output_node, model.test_data[0],
                    model.test_data[1], input_placeholder, label_placeholder, graph)
     # the same with the quantized model
-    output_node, input_placeholder, label_placeholder,graph = restore(model.output_quantized_graph, model)
+    output_node, input_placeholder, label_placeholder, graph = restore(model.output_quantized_graph, model)
     get_model_perf(evaluate, "model_quant", model.test_data[0], output_node, model.test_data[0],
                    model.test_data[1], input_placeholder, label_placeholder, graph)
 
