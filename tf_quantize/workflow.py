@@ -121,7 +121,7 @@ def get_model_perf(function_to_call, net_name, test_data, *args):
     print net_perf
 
 
-def evaluate(output_node, test_data, labels, input_placeholder_node, label_placeholder_node):
+def evaluate(output_node, test_data, labels, input_placeholder_node, label_placeholder_node,graph):
     """
     Takes a graph as input, attaches an accuracy node and evaluates it
     :param output_node output node of the net, used for accuracy
@@ -131,13 +131,14 @@ def evaluate(output_node, test_data, labels, input_placeholder_node, label_place
     :param test_data test images
     :return: the accuracy of the net
     """
-    sess = tf.Session()
-    correct_prediction = tf.equal(tf.argmax(output_node, 1), tf.argmax(labels, 1))
-    accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-    accuracy = sess.run(accuracy,
-                             feed_dict={input_placeholder_node: test_data,
-                                        label_placeholder_node: labels})
-    return accuracy
+    with graph.as_default():
+        sess = tf.Session(graph = graph)
+        correct_prediction = tf.equal(tf.argmax(output_node, 1), tf.argmax(labels, 1))
+        accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+        acc = sess.run(accuracy,
+                                 feed_dict={input_placeholder_node: test_data,
+                                            label_placeholder_node: labels})
+        return acc
 
 
 def restore(meta_graph_path, model):
@@ -149,13 +150,29 @@ def restore(meta_graph_path, model):
     """
     # take the graph
     print meta_graph_path
-    saver = tf.train.import_meta_graph(meta_graph_path)
-    graph = tf.get_default_graph()
-    # access placeholder
-    input_placeholder = graph.get_tensor_by_name(model.input_placeholder_name+":0")
-    label_placeholder = graph.get_tensor_by_name(model.label_placeholder_name+":0")
-    output_node = graph.get_tensor_by_name(model.output_node_name+":0")
-    return output_node, input_placeholder, label_placeholder
+     # We load the protobuf file from the disk and parse it to retrieve the 
+    # unserialized graph_def
+    with tf.gfile.GFile(meta_graph_path, "rb") as f:
+        graph_def = tf.GraphDef()
+        graph_def.ParseFromString(f.read())
+
+    # Then, we can use again a convenient built-in function to import a graph_def into the 
+    # current default Graph
+    with tf.Graph().as_default() as graph:
+        tf.import_graph_def(
+            graph_def, 
+            input_map=None, 
+            return_elements=None, 
+            op_dict=None, 
+            name="prefix",
+            producer_op_list=None
+        )
+    
+        # access placeholder
+        input_placeholder = graph.get_tensor_by_name("prefix/"+model.input_placeholder_name+":0")
+        label_placeholder = tf.placeholder(tf.float32, shape=[None, 10], name="labels")
+        output_node = graph.get_tensor_by_name("prefix/"+model.output_node_name+":0")
+        return output_node, input_placeholder, label_placeholder,graph
 
 
 def main():
@@ -168,14 +185,14 @@ def main():
     # quantize the trained model
     quantize(model)
     # restore the real model
-    output_node, input_placeholder, label_placeholder = restore(model.output_pb_path, model)
+    output_node, input_placeholder, label_placeholder,graph = restore(model.output_pb_path, model)
     # get performance of the model
-    get_model_perf(evaluate, model.net_name, model.test_data.images, output_node, model.test_data[0],
-                   model.test_data[1], input_placeholder, label_placeholder)
+    get_model_perf(evaluate, model.net_name, model.test_data[0], output_node, model.test_data[0],
+                   model.test_data[1], input_placeholder, label_placeholder, graph)
     # the same with the quantized model
-    output_node, input_placeholder, label_placeholder = restore(model.output_quantized_graph, model)
-    get_model_perf(evaluate, "model_quant", model.test_data.images, output_node, model.test_data[0],
-                   model.test_data[1], input_placeholder, label_placeholder)
+    output_node, input_placeholder, label_placeholder,graph = restore(model.output_quantized_graph, model)
+    get_model_perf(evaluate, "model_quant", model.test_data[0], output_node, model.test_data[0],
+                   model.test_data[1], input_placeholder, label_placeholder, graph)
 
 
 if __name__ == '__main__':
