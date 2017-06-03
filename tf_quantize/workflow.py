@@ -20,10 +20,10 @@ def quantize(model):
     quantize takes the model of the net. output graph name is the output of the method freeze.
     output name is the name of the output node of the net
     quantized graph name is the output of the method quantize.
-    requires an env variable pointing to the tf_quantize home
+    requires an env variable pointing to the tensorflow home
     :param model: the net implementing the abstract class
     """
-    quantize_command = os.environ['TF_HOME'] + '/bazel-bin/tf_quantize/tools/quantization/quantize_graph \
+    quantize_command = os.environ['TF_HOME'] + '/bazel-bin/tensorflow/tools/quantization/quantize_graph \
   --input=' + model.output_pb_path + ' \
   --output_node_names="' + model.output_name + '" --output=' + model.output_quantized_graph + ' \
   --mode=eightbit'
