@@ -53,13 +53,6 @@ class ToBeQuantizedNetwork:
         """
         pass
 
-    @abstractproperty
-    def accuracy_node_name(self):
-        """
-        The name used to export with tf.collection the accuracy node of the network
-        """
-        pass
-
     """
     Properties needed to execute the export to pb method
     """
@@ -107,7 +100,7 @@ class ToBeQuantizedNetwork:
         pass
 
     """
-    prepare, train, evaluate pattern
+    prepare, train
     """
 
     @abstractmethod
@@ -124,9 +117,3 @@ class ToBeQuantizedNetwork:
         This methods contains the training algorithm, that uses the training node defined in prepare
         """
         pass
-
-    @abstractmethod
-    def evaluate(self):
-        """
-        This methods contains the test algorithm, that uses the accuracy node defined in prepare
-        """
