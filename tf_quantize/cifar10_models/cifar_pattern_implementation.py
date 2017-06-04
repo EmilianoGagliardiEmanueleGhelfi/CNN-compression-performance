@@ -20,8 +20,10 @@ import re
 import sys
 import tarfile
 from six.moves import urllib
+import cifar10_processing
 
 BATCH_SIZE = 128
+STEPS = 1
 
 # Global constants describing the CIFAR-10 data set.
 IMAGE_SIZE = cifar10_input.IMAGE_SIZE
@@ -36,7 +38,7 @@ LEARNING_RATE_DECAY_FACTOR = 0.1  # Learning rate decay factor.
 INITIAL_LEARNING_RATE = 0.1  # Initial learning rate.
 DATA_DIR = 'CIFAR10_data'
 
-DATA_URL = 'http://www.cs.toronto.edu/~kriz/cifar-10-binary.tar.gz'
+DATA_URL = "https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz"
 
 
 def maybe_download_and_extract():
@@ -56,9 +58,34 @@ def maybe_download_and_extract():
         print()
         statinfo = os.stat(filepath)
         print('Successfully downloaded', filename, statinfo.st_size, 'bytes.')
-    extracted_dir_path = os.path.join(dest_directory, 'cifar-10-batches-bin')
+    extracted_dir_path = os.path.join(dest_directory, 'cifar-10-batches-py')
     if not os.path.exists(extracted_dir_path):
         tarfile.open(filepath, 'r:gz').extractall(dest_directory)
+
+
+def _add_loss_summaries(total_loss):
+    """Add summaries for losses in CIFAR-10 model.
+  Generates moving average for all losses and associated summaries for
+  visualizing the performance of the network.
+  Args:
+    total_loss: Total loss from loss().
+  Returns:
+    loss_averages_op: op for generating moving averages of losses.
+  """
+    # Compute the moving average of all individual losses and the total loss.
+    loss_averages = tf.train.ExponentialMovingAverage(0.9, name='avg')
+    losses = tf.get_collection('losses')
+    loss_averages_op = loss_averages.apply(losses + [total_loss])
+
+    # Attach a scalar summary to all individual losses and the total loss; do the
+    # same for the averaged version of the losses.
+    for l in losses + [total_loss]:
+        # Name each loss as '(raw)' and name the moving average version of the loss
+        # as the original loss name.
+        tf.summary.scalar(l.op.name + ' (raw)', l)
+        tf.summary.scalar(l.op.name, loss_averages.average(l))
+
+    return loss_averages_op
 
 
 def inputs(eval_data):
@@ -118,10 +145,9 @@ def _variable_on_cpu(name, shape, initializer):
 
 
 class Cifar10Network(ToBeQuantizedNetwork):
-
     # properties needed to evaluate the quantized network in workflow
     test_iterations = 1
-    test_data = None  # initialized in prepare, tuple with input, labels
+    test_data = []  # initialized in prepare, tuple with input, labels
     input_placeholder_name = 'input'
     label_placeholder_name = 'label'
     output_node_name = 'output'
@@ -135,7 +161,8 @@ class Cifar10Network(ToBeQuantizedNetwork):
     output_quantized_graph = 'cifar10_models/models/quantized_graph.pb'
 
     def __init__(self):
-        self._dataset = None
+        self._dataset = []
+        self.test_data = []
         self._input_placeholder = None
         self._output_placeholder = None
         self._label_placeholder = None
@@ -153,8 +180,7 @@ class Cifar10Network(ToBeQuantizedNetwork):
           Loss tensor of type float.
         """
         # Calculate the average cross entropy loss across the batch.
-        labels = tf.cast(labels, tf.int64)
-        cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(
+        cross_entropy = tf.nn.softmax_cross_entropy_with_logits(
             labels=labels, logits=logits, name='cross_entropy_per_example')
         cross_entropy_mean = tf.reduce_mean(cross_entropy, name='cross_entropy')
         tf.add_to_collection('losses', cross_entropy_mean)
@@ -184,9 +210,12 @@ class Cifar10Network(ToBeQuantizedNetwork):
                                         decay_steps,
                                         LEARNING_RATE_DECAY_FACTOR,
                                         staircase=True)
+        # Generate moving averages of all losses and associated summaries.
+        loss_averages_op = _add_loss_summaries(total_loss)
 
-        opt = tf.train.GradientDescentOptimizer(lr)
-        grads = opt.compute_gradients(total_loss)
+        with tf.control_dependencies([loss_averages_op]):
+            opt = tf.train.GradientDescentOptimizer(lr)
+            grads = opt.compute_gradients(total_loss)
 
         # Apply gradients.
         apply_gradient_op = opt.apply_gradients(grads, global_step=global_step)
@@ -196,8 +225,7 @@ class Cifar10Network(ToBeQuantizedNetwork):
 
         return train_op
 
-
-    def _inference(self,images):
+    def _inference(self):
         """Build the CIFAR-10 model.
         Args:
           images: Images returned from distorted_inputs() or inputs().
@@ -209,13 +237,16 @@ class Cifar10Network(ToBeQuantizedNetwork):
         # If we only ran this model on a single GPU, we could simplify this function
         # by replacing all instances of tf.get_variable() with tf.Variable().
         #
+
+        x = tf.placeholder(tf.float32, shape=[cifar10_processing._num_images_train, IMAGE_SIZE, IMAGE_SIZE, 3], name=self.input_placeholder_name)
+        y_ = tf.placeholder(tf.float32, shape=[cifar10_processing._num_images_train], name=self.label_placeholder_name)
         # conv1
         with tf.variable_scope('conv1') as scope:
             kernel = _variable_with_weight_decay('weights',
                                                  shape=[5, 5, 3, 64],
                                                  stddev=5e-2,
                                                  wd=0.0)
-            conv = tf.nn.conv2d(images, kernel, [1, 1, 1, 1], padding='SAME')
+            conv = tf.nn.conv2d(x, kernel, [1, 1, 1, 1], padding='SAME')
             biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
             pre_activation = tf.nn.bias_add(conv, biases)
             conv1 = tf.nn.relu(pre_activation, name=scope.name)
@@ -273,7 +304,7 @@ class Cifar10Network(ToBeQuantizedNetwork):
                                       tf.constant_initializer(0.0))
             softmax_linear = tf.add(tf.matmul(local4, weights), biases, name=scope.name)
 
-        return softmax_linear
+        return x, softmax_linear, y_
 
     """
     from here there is the implementation of the prepare, train, evaluate pattern
@@ -283,26 +314,29 @@ class Cifar10Network(ToBeQuantizedNetwork):
         """
         operation that obtains data and create the computation graph
         """
-        self._dataset = inputs()
+        maybe_download_and_extract()
+        images, _, labels = cifar10_processing.load_training_data()
         # assign the test dataset that will be used by the workflow to test this and the quantized net
-        self.test_data = inputs(eval_data='test')
-        self._input_placeholder, self._output_placeholder, self._label_placeholder = self._inference(self._dataset[0])
-        loss_node = self._loss(self._label_placeholder, self._output_placeholder)
-        self._train_step_node = self._train(loss_node)
+        test_images, _, test_labels = cifar10_processing.load_test_data()
+        self._dataset.append(images)
+        self._dataset.append(labels)
+        self.test_data.append(test_images)
+        self.test_data.append(labels)
+        self._input_placeholder, self._output_placeholder, self._label_placeholder = self._inference()
+        loss_node = self._loss(self._output_placeholder, self._label_placeholder)
+        global_step = tf.contrib.framework.get_or_create_global_step()
+        self._train_step_node = self._train(loss_node, global_step)
 
     def train(self):
         """
         train the network
         export checkpoints and the metagraph description
         """
-        iterations = 1
         # initialize the variables
         self._sess.run(tf.global_variables_initializer())
         # training iterations
-        for i in range(iterations + 1):
-            batch = self._dataset.train.next_batch(100)
-            self._sess.run(fetches=self._train_step_node,
-                           feed_dict={self._input_placeholder: batch[0], self._label_placeholder: batch[1]})
+        self._sess.run(fetches=self._train_step_node,
+                       feed_dict={self._input_placeholder: self._dataset[0], self._label_placeholder: self._dataset[1]})
         self._save()
 
     def _save(self):

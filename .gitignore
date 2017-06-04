@@ -5,3 +5,4 @@
 .DS_Store
 **/MNIST_data/*
 **/mnist_models/models/*
+**/CIFAR10_data/*
