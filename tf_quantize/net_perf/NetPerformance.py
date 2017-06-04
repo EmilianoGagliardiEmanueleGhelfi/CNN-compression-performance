@@ -4,8 +4,8 @@ takes the output of perf and setup the attribute of the object net_object
 
 
 def setup_net(perf_output, net_object):
-    perf_ouput_list = perf_output.split("\n")
-    for line in perf_ouput_list:
+    perf_output_list = perf_output.split("\n")
+    for line in perf_output_list:
         # the last line is empty
         if line != "":
             values = line.split(",")
@@ -20,11 +20,12 @@ class NetPerformance:
     # test time in sec for each image
     test_time = None
 
-    """
-    :param net name is the name of the net
-    """
-
     def __init__(self, net_name, accuracy, perf_output):
+        """
+        :param net_name is the name of the net
+        :param accuracy is the accuracy of the net in testing
+        :param perf_output is the string output of perf_tool, to be parsed
+        """
         self.name = net_name
         self.accuracy = accuracy
         setup_net(perf_output, self)
