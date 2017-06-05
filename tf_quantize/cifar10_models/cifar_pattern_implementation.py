@@ -154,11 +154,11 @@ class Cifar10Network(ToBeQuantizedNetwork):
     net_name = "cifar10_net"
 
     # properties needed to export to pb in workflow. We put checkpoint data, meta graph
-    checkpoint_prefix = 'cifar10_models/models/net'
-    checkpoint_path = 'cifar10_models/models'
-    metagraph_path = 'cifar10_models/models/metagraph.pb'
-    output_pb_path = 'cifar10_models/models/output_graph.pb'
-    output_quantized_graph = 'cifar10_models/models/quantized_graph.pb'
+    checkpoint_prefix = 'cifar10_models/2cov_2fc/net'
+    checkpoint_path = 'cifar10_models/2cov_2fc'
+    metagraph_path = 'cifar10_models/2cov_2fc/metagraph.pb'
+    output_pb_path = 'cifar10_models/2cov_2fc/output_graph.pb'
+    output_quantized_graph = 'cifar10_models/2cov_2fc/quantized_graph.pb'
 
     def __init__(self):
         self._dataset = []

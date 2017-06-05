@@ -4,5 +4,5 @@
 **.idea
 .DS_Store
 **/MNIST_data/*
-**/mnist_models/models/*
+tf_quantize/CNNs/mnist_models/2cov_2fc/*
 **/CIFAR10_data/*

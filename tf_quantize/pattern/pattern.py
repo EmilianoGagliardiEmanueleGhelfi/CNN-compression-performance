@@ -75,7 +75,7 @@ class ToBeQuantizedNetwork:
     @abstractproperty
     def checkpoint_path(self):
         """
-        The path containing checkpoint and models
+        The path containing checkpoint and 2cov_2fc
         """
         pass
 
