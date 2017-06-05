@@ -36,32 +36,37 @@ import numpy as np
 import pickle
 import os
 from dataset import one_hot_encoded
+import re
+import sys
+import tarfile
+from six.moves import urllib
 
 
 ########################################################################
 
 # Directory where you want to download and save the data-set.
 # Set this before you start calling any of the functions below.
-data_path = 'CIFAR10_data'
+DATA_DIR = 'CIFAR10_data'
 
 # URL for the data-set on the internet.
-data_url = "https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz"
+DATA_URL = "https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz"
+
 
 ########################################################################
 # Various constants for the size of the images.
 # Use these constants in your own program.
 
 # Width and height of each image.
-img_size = 32
+IMG_SIZE = 32
 
 # Number of channels in each image, 3 channels: Red, Green, Blue.
 num_channels = 3
 
 # Length of an image when flattened to a 1-dim array.
-img_size_flat = img_size * img_size * num_channels
+img_size_flat = IMG_SIZE * IMG_SIZE * num_channels
 
 # Number of classes.
-num_classes = 10
+NUM_CLASSES = 10
 
 ########################################################################
 # Various constants used to allocate arrays of the correct size.
@@ -74,7 +79,8 @@ _images_per_file = 10000
 
 # Total number of images in the training-set.
 # This is used to pre-allocate arrays for efficiency.
-_num_images_train = _num_files_train * _images_per_file
+NUM_IMG_TRAIN = _num_files_train * _images_per_file
+NUM_IMG_TEST = 10000
 
 ########################################################################
 # Private functions for downloading, unpacking and loading data-files.
@@ -86,7 +92,7 @@ def _get_file_path(filename=""):
     If filename=="" then return the directory of the files.
     """
 
-    return os.path.join(data_path, "cifar-10-batches-py/", filename)
+    return os.path.join(DATA_DIR, "cifar-10-batches-py/", filename)
 
 
 def _unpickle(filename):
@@ -119,7 +125,7 @@ def _convert_images(raw):
     raw_float = np.array(raw, dtype=float) / 255.0
 
     # Reshape the array to 4-dimensions.
-    images = raw_float.reshape([-1, num_channels, img_size, img_size])
+    images = raw_float.reshape([-1, num_channels, IMG_SIZE, IMG_SIZE])
 
     # Reorder the indices of the array.
     images = images.transpose([0, 2, 3, 1])
@@ -153,6 +159,26 @@ def _load_data(filename):
 # Public functions that you may call to download the data-set from
 # the internet and load the data into memory.
 
+def maybe_download_and_extract():
+    """Download and extract the tarball from Alex's website."""
+    dest_directory = DATA_DIR
+    if not os.path.exists(dest_directory):
+        os.makedirs(dest_directory)
+    filename = DATA_URL.split('/')[-1]
+    filepath = os.path.join(dest_directory, filename)
+    if not os.path.exists(filepath):
+        def _progress(count, block_size, total_size):
+            sys.stdout.write('\r>> Downloading %s %.1f%%' % (filename,
+                                                             float(count * block_size) / float(total_size) * 100.0))
+            sys.stdout.flush()
+
+        filepath, _ = urllib.request.urlretrieve(DATA_URL, filepath, _progress)
+        print()
+        statinfo = os.stat(filepath)
+        print('Successfully downloaded', filename, statinfo.st_size, 'bytes.')
+    extracted_dir_path = os.path.join(dest_directory, 'cifar-10-batches-py')
+    if not os.path.exists(extracted_dir_path):
+        tarfile.open(filepath, 'r:gz').extractall(dest_directory)
 
 
 def load_class_names():
@@ -179,8 +205,8 @@ def load_training_data():
     """
 
     # Pre-allocate the arrays for the images and class-numbers for efficiency.
-    images = np.zeros(shape=[_num_images_train, img_size, img_size, num_channels], dtype=float)
-    cls = np.zeros(shape=[_num_images_train], dtype=int)
+    images = np.zeros(shape=[NUM_IMG_TRAIN, IMG_SIZE, IMG_SIZE, num_channels], dtype=float)
+    cls = np.zeros(shape=[NUM_IMG_TRAIN], dtype=int)
 
     # Begin-index for the current batch.
     begin = 0
@@ -205,7 +231,7 @@ def load_training_data():
         # The begin-index for the next batch is the current end-index.
         begin = end
 
-    return images, cls, one_hot_encoded(class_numbers=cls, num_classes=num_classes)
+    return images, cls, one_hot_encoded(class_numbers=cls, num_classes=NUM_CLASSES)
 
 
 def load_test_data():
@@ -216,4 +242,4 @@ def load_test_data():
 
     images, cls = _load_data(filename="test_batch")
 
-    return images, cls, one_hot_encoded(class_numbers=cls, num_classes=num_classes)
+    return images, cls, one_hot_encoded(class_numbers=cls, num_classes=NUM_CLASSES)

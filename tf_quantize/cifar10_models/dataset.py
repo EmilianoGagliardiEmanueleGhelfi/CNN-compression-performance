@@ -17,9 +17,15 @@
 # Copyright 2016 by Magnus Erik Hvass Pedersen
 #
 ########################################################################
-
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import numpy as np
-import os
+import numpy
+from six.moves import xrange  # pylint: disable=redefined-builtin
+from tensorflow.python.framework import dtypes
+from tensorflow.python.framework import random_seed
+
 
 ########################################################################
 

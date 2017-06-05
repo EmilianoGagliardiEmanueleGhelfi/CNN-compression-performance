@@ -1,8 +1,5 @@
 """Builds the CIFAR-10 network.
 Summary of available functions:
- # Compute input images and labels for training. If you would like to run
- # evaluations, use inputs() instead.
- inputs, labels = distorted_inputs()
  # Compute inference on the model inputs to make a prediction.
  predictions = inference(inputs)
  # Compute the total loss of the prediction with respect to the labels.
@@ -12,55 +9,24 @@ Summary of available functions:
 """
 
 import tensorflow as tf
-from tensorflow.examples.tutorials.mnist import input_data
 from tf_quantize.pattern.pattern import ToBeQuantizedNetwork
-import cifar10_input
-import os
-import re
-import sys
-import tarfile
-from six.moves import urllib
 import cifar10_processing
+from tensorflow.contrib.learn.python.learn.datasets.mnist import DataSet
 
-BATCH_SIZE = 128
-STEPS = 1
+BATCH_SIZE = 100
+STEPS = 10000
 
 # Global constants describing the CIFAR-10 data set.
-IMAGE_SIZE = cifar10_input.IMAGE_SIZE
-NUM_CLASSES = cifar10_input.NUM_CLASSES
-NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = cifar10_input.NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN
-NUM_EXAMPLES_PER_EPOCH_FOR_EVAL = cifar10_input.NUM_EXAMPLES_PER_EPOCH_FOR_EVAL
+IMAGE_SIZE = cifar10_processing.IMG_SIZE
+NUM_CLASSES = cifar10_processing.NUM_CLASSES
+NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = cifar10_processing.NUM_IMG_TRAIN
+NUM_EXAMPLES_PER_EPOCH_FOR_EVAL = cifar10_processing.NUM_IMG_TEST
 
 # Constants describing the training process.
 MOVING_AVERAGE_DECAY = 0.9999  # The decay to use for the moving average.
 NUM_EPOCHS_PER_DECAY = 350.0  # Epochs after which learning rate decays.
 LEARNING_RATE_DECAY_FACTOR = 0.1  # Learning rate decay factor.
 INITIAL_LEARNING_RATE = 0.1  # Initial learning rate.
-DATA_DIR = 'CIFAR10_data'
-
-DATA_URL = "https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz"
-
-
-def maybe_download_and_extract():
-    """Download and extract the tarball from Alex's website."""
-    dest_directory = DATA_DIR
-    if not os.path.exists(dest_directory):
-        os.makedirs(dest_directory)
-    filename = DATA_URL.split('/')[-1]
-    filepath = os.path.join(dest_directory, filename)
-    if not os.path.exists(filepath):
-        def _progress(count, block_size, total_size):
-            sys.stdout.write('\r>> Downloading %s %.1f%%' % (filename,
-                                                             float(count * block_size) / float(total_size) * 100.0))
-            sys.stdout.flush()
-
-        filepath, _ = urllib.request.urlretrieve(DATA_URL, filepath, _progress)
-        print()
-        statinfo = os.stat(filepath)
-        print('Successfully downloaded', filename, statinfo.st_size, 'bytes.')
-    extracted_dir_path = os.path.join(dest_directory, 'cifar-10-batches-py')
-    if not os.path.exists(extracted_dir_path):
-        tarfile.open(filepath, 'r:gz').extractall(dest_directory)
 
 
 def _add_loss_summaries(total_loss):
@@ -86,23 +52,6 @@ def _add_loss_summaries(total_loss):
         tf.summary.scalar(l.op.name, loss_averages.average(l))
 
     return loss_averages_op
-
-
-def inputs(eval_data):
-    """Construct input for CIFAR evaluation using the Reader ops.
-    Args:
-      eval_data: bool, indicating if one should use the train or eval data set.
-    Returns:
-      images: Images. 4D tensor of [batch_size, IMAGE_SIZE, IMAGE_SIZE, 3] size.
-      labels: Labels. 1D tensor of [batch_size] size.
-    Raises:
-      ValueError: If no data_dir
-    """
-    data_dir = os.path.join(DATA_DIR, 'cifar-10-batches-bin')
-    images, labels = cifar10_input.inputs(eval_data=eval_data,
-                                          data_dir=data_dir,
-                                          batch_size=BATCH_SIZE)
-    return images, labels
 
 
 def _variable_with_weight_decay(name, shape, stddev, wd):
@@ -154,14 +103,14 @@ class Cifar10Network(ToBeQuantizedNetwork):
     net_name = "cifar10_net"
 
     # properties needed to export to pb in workflow. We put checkpoint data, meta graph
-    checkpoint_prefix = 'cifar10_models/2cov_2fc/net'
-    checkpoint_path = 'cifar10_models/2cov_2fc'
-    metagraph_path = 'cifar10_models/2cov_2fc/metagraph.pb'
-    output_pb_path = 'cifar10_models/2cov_2fc/output_graph.pb'
-    output_quantized_graph = 'cifar10_models/2cov_2fc/quantized_graph.pb'
+    checkpoint_prefix = 'cifar10_models/net_serialization/2conv_2fc/net'
+    checkpoint_path = 'cifar10_models/net_serialization/2conv_2fc'
+    metagraph_path = 'cifar10_models/net_serialization/2conv_2fc/metagraph.pb'
+    output_pb_path = 'cifar10_models/net_serialization/2conv_2fc/output_graph.pb'
+    output_quantized_graph = 'cifar10_models/net_serialization/2cov_2fc/quantized_graph.pb'
 
     def __init__(self):
-        self._dataset = []
+        self._dataset = None
         self.test_data = []
         self._input_placeholder = None
         self._output_placeholder = None
@@ -238,8 +187,8 @@ class Cifar10Network(ToBeQuantizedNetwork):
         # by replacing all instances of tf.get_variable() with tf.Variable().
         #
 
-        x = tf.placeholder(tf.float32, shape=[cifar10_processing._num_images_train, IMAGE_SIZE, IMAGE_SIZE, 3], name=self.input_placeholder_name)
-        y_ = tf.placeholder(tf.float32, shape=[cifar10_processing._num_images_train], name=self.label_placeholder_name)
+        x = tf.placeholder(tf.float32, shape=[None, IMAGE_SIZE, IMAGE_SIZE, 3], name=self.input_placeholder_name)
+        y_ = tf.placeholder(tf.float32, shape=[None, 10], name=self.label_placeholder_name)
         # conv1
         with tf.variable_scope('conv1') as scope:
             kernel = _variable_with_weight_decay('weights',
@@ -277,32 +226,28 @@ class Cifar10Network(ToBeQuantizedNetwork):
                                strides=[1, 2, 2, 1], padding='SAME', name='pool2')
 
         # local3
-        with tf.variable_scope('local3') as scope:
-            # Move everything into depth so we can perform a single matrix multiply.
-            reshape = tf.reshape(pool2, [BATCH_SIZE, -1])
-            dim = reshape.get_shape()[1].value
-            weights = _variable_with_weight_decay('weights', shape=[dim, 384],
-                                                  stddev=0.04, wd=0.004)
-            biases = _variable_on_cpu('biases', [384], tf.constant_initializer(0.1))
-            local3 = tf.nn.relu(tf.matmul(reshape, weights) + biases, name=scope.name)
+        # Move everything into depth so we can perform a single matrix multiply.
+        reshape = tf.reshape(pool2, [-1, 8*8*64])
+        weights = _variable_with_weight_decay('weights3', shape=[8*8*64, 384],
+                                              stddev=0.04, wd=0.004)
+        biases = _variable_on_cpu('biases3', [384], tf.constant_initializer(0.1))
+        local3 = tf.nn.relu(tf.matmul(reshape, weights) + biases, name='local3')
 
         # local4
-        with tf.variable_scope('local4') as scope:
-            weights = _variable_with_weight_decay('weights', shape=[384, 192],
-                                                  stddev=0.04, wd=0.004)
-            biases = _variable_on_cpu('biases', [192], tf.constant_initializer(0.1))
-            local4 = tf.nn.relu(tf.matmul(local3, weights) + biases, name=scope.name)
+        weights = _variable_with_weight_decay('weights4', shape=[384, 192],
+                                              stddev=0.04, wd=0.004)
+        biases = _variable_on_cpu('biases4', [192], tf.constant_initializer(0.1))
+        local4 = tf.nn.relu(tf.matmul(local3, weights) + biases, name='local4')
 
         # linear layer(WX + b),
         # We don't apply softmax here because
         # tf.nn.sparse_softmax_cross_entropy_with_logits accepts the unscaled logits
         # and performs the softmax internally for efficiency.
-        with tf.variable_scope('softmax_linear') as scope:
-            weights = _variable_with_weight_decay('weights', [192, NUM_CLASSES],
-                                                  stddev=1 / 192.0, wd=0.0)
-            biases = _variable_on_cpu('biases', [NUM_CLASSES],
-                                      tf.constant_initializer(0.0))
-            softmax_linear = tf.add(tf.matmul(local4, weights), biases, name=scope.name)
+        weights = _variable_with_weight_decay('weights5', [192, NUM_CLASSES],
+                                              stddev=1 / 192.0, wd=0.0)
+        biases = _variable_on_cpu('biases5', [NUM_CLASSES],
+                                  tf.constant_initializer(0.0))
+        softmax_linear = tf.add(tf.matmul(local4, weights), biases, name=self.output_node_name)
 
         return x, softmax_linear, y_
 
@@ -314,14 +259,13 @@ class Cifar10Network(ToBeQuantizedNetwork):
         """
         operation that obtains data and create the computation graph
         """
-        maybe_download_and_extract()
+        cifar10_processing.maybe_download_and_extract()
         images, _, labels = cifar10_processing.load_training_data()
         # assign the test dataset that will be used by the workflow to test this and the quantized net
         test_images, _, test_labels = cifar10_processing.load_test_data()
-        self._dataset.append(images)
-        self._dataset.append(labels)
-        self.test_data.append(test_images)
-        self.test_data.append(labels)
+        # create an instance of dataset class
+        self._dataset = DataSet(images, labels, one_hot=True, reshape=False)
+        self.test_data = (test_images, test_labels)
         self._input_placeholder, self._output_placeholder, self._label_placeholder = self._inference()
         loss_node = self._loss(self._output_placeholder, self._label_placeholder)
         global_step = tf.contrib.framework.get_or_create_global_step()
@@ -335,8 +279,12 @@ class Cifar10Network(ToBeQuantizedNetwork):
         # initialize the variables
         self._sess.run(tf.global_variables_initializer())
         # training iterations
-        self._sess.run(fetches=self._train_step_node,
-                       feed_dict={self._input_placeholder: self._dataset[0], self._label_placeholder: self._dataset[1]})
+        for i in range(STEPS + 1):
+            batch = self._dataset.next_batch(BATCH_SIZE)
+            self._sess.run(fetches=self._train_step_node,
+                           feed_dict={self._input_placeholder: batch[0], self._label_placeholder: batch[1]})
+            if i%100 == 0:
+                print "Iteration "+str(i)
         self._save()
 
     def _save(self):
