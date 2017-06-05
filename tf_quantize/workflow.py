@@ -7,6 +7,8 @@ from tensorflow.python.tools import freeze_graph
 import importlib
 from distutils.util import strtobool
 
+from tf_quantize.pattern.pattern import ToBeQuantizedNetwork
+
 help = 'This script takes as input a cnn implemented using tensorflow. The network have to be defined like the in the' \
        'example file mnist_patter_implemementation.py, extending the ToBeQuantizedNetwork abstract class in ' \
        'pattern.py. It calls the prepare and train methods on the network. The implementation of the network need ' \
@@ -210,7 +212,7 @@ def main(model, to_train, to_quantize, to_evaluate):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=help)
-    parser.add_argument('--module_name', type=str, nargs=1, help='python file containig an implementation of '
+    parser.add_argument('--module_name', type=str, nargs=1, help='python file containing an implementation of '
                                                                  'ToBeQuantizedNetwork')
     parser.add_argument('--class_name', type=str, nargs=1, help='the name of the class')
     parser.add_argument('--train', type=str, nargs=1, help='True if you want to train, false otherwise. If you say '
@@ -221,5 +223,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     user_module = importlib.import_module(args.module_name[0])
     user_class = getattr(user_module, args.class_name[0])
+    # raises an exception if the input class does not satisfies to ToBeQuantized requirements
+    ToBeQuantizedNetwork.register(user_class)
     model_instance = user_class()
     main(model_instance, strtobool(args.train[0]), strtobool(args.quantize[0]), strtobool(args.evaluate[0]))

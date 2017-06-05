@@ -5,13 +5,11 @@ CNN for mnist data set, with 2 couple convolution max pooling layer, and two ful
 
 import tensorflow as tf
 from tensorflow.examples.tutorials.mnist import input_data
-from tf_quantize.pattern.pattern import ToBeQuantizedNetwork
 import tf_quantize.CNNs.CNN_utility as cnnu
+from tf_quantize.pattern.pattern import ToBeQuantizedNetwork
 
 
 class Mnist2Conv2Fc(ToBeQuantizedNetwork):
-    # properties needed to evaluate the quantized network in workflow
-    test_iterations = 100
     test_data = None  # initialized in prepare, tuple with input, labels
     input_placeholder_name = 'input'
     label_placeholder_name = 'label'

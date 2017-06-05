@@ -12,8 +12,6 @@ neurons3 = 10
 
 
 class Mnist3Fc(ToBeQuantizedNetwork):
-    # properties needed to evaluate the quantized network in workflow
-    test_iterations = 1
     test_data = None  # initialized in prepare, tuple with input, labels
     input_placeholder_name = 'input'
     label_placeholder_name = 'label'

@@ -16,19 +16,10 @@ class ToBeQuantizedNetwork:
     Properties needed to run the test of the quantized network
     """
 
-
     @abstractproperty
     def net_name(self):
         """
         name of the network
-        """
-        pass
-
-    @abstractproperty
-    def test_iterations(self):
-        """
-        need to define the iteration used in the test algorithm, in order to make comparable the performance in term
-        of test time and cache miss of the network and the quantized network
         """
         pass
 
