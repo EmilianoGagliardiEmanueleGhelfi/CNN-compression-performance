@@ -1,34 +1,17 @@
 """
 CNN for mnist data set, with 2 couple convolution max pooling layer, and two fully connected layer
+32 first level features, 64 second level features, 1024 fully connected, 10 fully connected
 """
 
 import tensorflow as tf
 from tensorflow.examples.tutorials.mnist import input_data
 from tf_quantize.pattern.pattern import ToBeQuantizedNetwork
+import tf_quantize.CNNs.CNN_utility as cnnu
 
 
-def weight_variable(shape):
-    initial = tf.truncated_normal(shape, stddev=0.1)
-    return tf.Variable(initial)
-
-
-def bias_variable(shape):
-    initial = tf.constant(0.1, shape=shape)
-    return tf.Variable(initial)
-
-
-def conv2d(x, W):
-    return tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding='SAME')
-
-
-def max_pool_2x2(x):
-    return tf.nn.max_pool(x, ksize=[1, 2, 2, 1],
-                          strides=[1, 2, 2, 1], padding='SAME')
-
-
-class MnistNetwork(ToBeQuantizedNetwork):
+class Mnist2Conv2Fc(ToBeQuantizedNetwork):
     # properties needed to evaluate the quantized network in workflow
-    test_iterations = 1
+    test_iterations = 100
     test_data = None  # initialized in prepare, tuple with input, labels
     input_placeholder_name = 'input'
     label_placeholder_name = 'label'
@@ -36,11 +19,11 @@ class MnistNetwork(ToBeQuantizedNetwork):
     net_name = "mnist_net"
 
     # properties needed to export to pb in workflow. We put checkpoint data, meta graph
-    checkpoint_prefix = 'mnist_models/2cov_2fc/net'
-    checkpoint_path = 'mnist_models/2cov_2fc'
-    metagraph_path = 'mnist_models/2cov_2fc/metagraph.pb'
-    output_pb_path = 'mnist_models/2cov_2fc/output_graph.pb'
-    output_quantized_graph = 'mnist_models/2cov_2fc/quantized_graph.pb'
+    checkpoint_prefix = 'CNNs/mnist_models/net_serializations/2conv_2fc/net'
+    checkpoint_path = 'CNNs/mnist_models/net_serializations/2conv_2fc'
+    metagraph_path = 'CNNs/mnist_models/net_serializations/2conv_2fc/metagraph.pb'
+    output_pb_path = 'CNNs/mnist_models/net_serializations/2conv_2fc/output_graph.pb'
+    output_quantized_graph = 'CNNs/mnist_models/net_serializations/2conv_2fc/quantized_graph.pb'
 
     def __init__(self):
         self._dataset = None
@@ -63,30 +46,31 @@ class MnistNetwork(ToBeQuantizedNetwork):
         y_ = tf.placeholder(tf.float32, shape=[None, 10], name=self.label_placeholder_name)
 
         # create the layers
+        x_image = tf.reshape(x, [-1, 28, 28, 1])  # give to the input the shape of the images
 
         # first convolution pooling layer
-        W_conv1 = weight_variable([5, 5, 1, 32])
-        b_conv1 = bias_variable([32])
-        x_image = tf.reshape(x, [-1, 28, 28, 1])
-        h_conv1 = tf.nn.relu(conv2d(x_image, W_conv1) + b_conv1)
-        h_pool1 = max_pool_2x2(h_conv1)
+        W_conv1 = cnnu.weight_variable([5, 5, 1, 32])
+        b_conv1 = cnnu.bias_variable([32])
+
+        h_conv1 = tf.nn.relu(cnnu.conv2d(x_image, W_conv1) + b_conv1)
+        h_pool1 = cnnu.max_pool_2x2(h_conv1)
 
         # second convolution pooling layer
-        W_conv2 = weight_variable([5, 5, 32, 64])
-        b_conv2 = bias_variable([64])
-        h_conv2 = tf.nn.relu(conv2d(h_pool1, W_conv2) + b_conv2)
-        h_pool2 = max_pool_2x2(h_conv2)
+        W_conv2 = cnnu.weight_variable([5, 5, 32, 64])
+        b_conv2 = cnnu.bias_variable([64])
+        h_conv2 = tf.nn.relu(cnnu.conv2d(h_pool1, W_conv2) + b_conv2)
+        h_pool2 = cnnu.max_pool_2x2(h_conv2)
 
         # densely connected layer
-        W_fc1 = weight_variable([7 * 7 * 64, 1024])
-        b_fc1 = bias_variable([1024])
+        W_fc1 = cnnu.weight_variable([7 * 7 * 64, 1024])
+        b_fc1 = cnnu.bias_variable([1024])
 
         h_pool2_flat = tf.reshape(h_pool2, [-1, 7 * 7 * 64])
         h_fc1 = tf.nn.relu(tf.matmul(h_pool2_flat, W_fc1) + b_fc1)
 
         # readout layer
-        W_fc2 = weight_variable([1024, 10])
-        b_fc2 = bias_variable([10])
+        W_fc2 = cnnu.weight_variable([1024, 10])
+        b_fc2 = cnnu.bias_variable([10])
 
         y_conv = tf.add(tf.matmul(h_fc1, W_fc2), b_fc2, name=self.output_node_name)
 
@@ -113,7 +97,7 @@ class MnistNetwork(ToBeQuantizedNetwork):
         return train_step
 
     """
-    from here there is the implementation of the prepare, train, evaluate pattern
+    from here there is the implementation of the prepare, train pattern
     """
 
     def prepare(self):

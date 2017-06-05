@@ -5,6 +5,7 @@ from datetime import datetime
 import tensorflow as tf
 from tensorflow.python.tools import freeze_graph
 import importlib
+from distutils.util import strtobool
 
 help = 'This script takes as input a cnn implemented using tensorflow. The network have to be defined like the in the' \
        'example file mnist_patter_implemementation.py, extending the ToBeQuantizedNetwork abstract class in ' \
@@ -185,32 +186,40 @@ def restore(meta_graph_path, model):
         return output_node, input_placeholder, label_placeholder, graph
 
 
-def main(model):
+def main(model, to_train, to_quantize, to_evaluate):
     model.prepare()
-    model.train()
+    if to_train:
+        model.train()
     print "Exporting the graph"
     # export the trained model to pb
     export_to_pb(model)
     # quantize the trained model
-    quantize(model)
+    if to_quantize:
+        quantize(model)
     # restore the real model
-    output_node, input_placeholder, label_placeholder, graph = restore(model.output_pb_path, model)
-    # get performance of the model
-    get_model_perf(evaluate, model.net_name, model.test_data[0], output_node, model.test_data[0],
-                   model.test_data[1], input_placeholder, label_placeholder, graph)
-    # the same with the quantized model
-    output_node, input_placeholder, label_placeholder, graph = restore(model.output_quantized_graph, model)
-    get_model_perf(evaluate, "model_quant", model.test_data[0], output_node, model.test_data[0],
-                   model.test_data[1], input_placeholder, label_placeholder, graph)
+    if to_evaluate:
+        output_node, input_placeholder, label_placeholder, graph = restore(model.output_pb_path, model)
+        # get performance of the model
+        get_model_perf(evaluate, model.net_name, model.test_data[0], output_node, model.test_data[0],
+                       model.test_data[1], input_placeholder, label_placeholder, graph)
+        # the same with the quantized model
+        output_node, input_placeholder, label_placeholder, graph = restore(model.output_quantized_graph, model)
+        get_model_perf(evaluate, "model_quant", model.test_data[0], output_node, model.test_data[0],
+                       model.test_data[1], input_placeholder, label_placeholder, graph)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=help)
-    parser.add_argument('module_name', type=str, nargs=1, help='python file containig an implementation of '
-                                                               'ToBeQuantizedNetwork')
-    parser.add_argument('class_name', type=str, nargs=1, help='the name of the class')
+    parser.add_argument('--module_name', type=str, nargs=1, help='python file containig an implementation of '
+                                                                 'ToBeQuantizedNetwork')
+    parser.add_argument('--class_name', type=str, nargs=1, help='the name of the class')
+    parser.add_argument('--train', type=str, nargs=1, help='True if you want to train, false otherwise. If you say '
+                                                           'false you need to have already a metagraph and a '
+                                                           'checkpoint')
+    parser.add_argument('--quantize', type=str, nargs=1, help='True if you want to quantize the net, false otherwise')
+    parser.add_argument('--evaluate', type=str, nargs=1, help='True if you want to evauate the network(s)')
     args = parser.parse_args()
     user_module = importlib.import_module(args.module_name[0])
     user_class = getattr(user_module, args.class_name[0])
     model_instance = user_class()
-    main(model_instance)
+    main(model_instance, strtobool(args.train[0]), strtobool(args.quantize[0]), strtobool(args.evaluate[0]))
