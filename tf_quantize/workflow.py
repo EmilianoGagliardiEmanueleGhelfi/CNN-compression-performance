@@ -185,6 +185,15 @@ def restore(meta_graph_path, model):
         label_placeholder = tf.placeholder(tf.float32, shape=[None, 10], name="labels")
         # get output node
         output_node = graph.get_tensor_by_name("prefix/" + model.output_node_name + ":0")
+
+        ##########################
+        print 'hello'
+        op = graph.get_operations()
+        sess = tf.InteractiveSession()
+        print [m.values() for m in op][1] # obtains the tensor with the weights of the first layer
+        print [m.values() for m in op][3] # obtains the tensot with the bias of the first layer
+        ##########################
+
         return output_node, input_placeholder, label_placeholder, graph
 
 
