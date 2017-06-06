@@ -19,6 +19,12 @@ class NetPerformance:
     accuracy = None
     # test time in sec for each image
     test_time = None
+    # dimension of the pb
+    size = None
+    # True if the net have been obtained bu a quantization
+    quantized = None
+    # path to the pb
+    path = None
 
     def __init__(self, net_name, accuracy, perf_output):
         """
@@ -35,3 +41,8 @@ class NetPerformance:
         for key in self.__dict__.keys():
             representation += key + ": " + str(self.__dict__[key]) + "\n"
         return representation
+
+    def serialize(self, output_file):
+        f = open(output_file, 'w')
+        f.write(self.__str__())
+        f.close()

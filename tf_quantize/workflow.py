@@ -1,11 +1,12 @@
 import argparse
 import subprocess, signal, platform, os
-from net_perf.NetPerformance import NetPerformance
+from net_perf.net_performance import NetPerformance
 from datetime import datetime
 import tensorflow as tf
 from tensorflow.python.tools import freeze_graph
 import importlib
 from distutils.util import strtobool
+import json
 
 from tf_quantize.pattern.pattern import ToBeQuantizedNetwork
 
@@ -87,11 +88,11 @@ def cache_perf_test(function_to_call, *args):
         print 'Terminated, accuracy =' + str(acc)
         out, err = process.communicate()
         print err
-        return NetPerformance(None, acc, err)
+        return acc, err
     else:
         print 'Perf in not available, testing without cache performance'
     acc = function_to_call(*args)
-    return NetPerformance(None, acc, "")
+    return acc, ""
 
 
 def get_test_time(function_to_call, *args):
@@ -118,8 +119,8 @@ def get_model_perf(function_to_call, net_name, test_data, *args):
     :return: a NetPerformance object containing the performance of the net
     """
     # get cache performance
-    net_perf = cache_perf_test(function_to_call, *args)
-    net_perf.name = net_name
+    acc, perf_stdout = cache_perf_test(function_to_call, *args)
+    net_perf = NetPerformance(net_name, acc, perf_stdout)
     # get test time
     # get test size, test_data is not a tensor, convert it with convert_to_tensor and get its shapes
     # shape[0] is the number of items, shape[1] is product of number of pixel I think
@@ -127,6 +128,7 @@ def get_model_perf(function_to_call, net_name, test_data, *args):
     # convert time returned by get test time into time for each item, in this way we get the average time
     net_perf.test_time = get_test_time(function_to_call, *args) / test_data_size
     print net_perf
+    return net_perf
 
 
 def evaluate(output_node, test_data, labels, input_placeholder_node, label_placeholder_node, graph):
@@ -186,14 +188,6 @@ def restore(meta_graph_path, model):
         # get output node
         output_node = graph.get_tensor_by_name("prefix/" + model.output_node_name + ":0")
 
-        ##########################
-        print 'hello'
-        op = graph.get_operations()
-        sess = tf.InteractiveSession()
-        print [m.values() for m in op][1] # obtains the tensor with the weights of the first layer
-        print [m.values() for m in op][3] # obtains the tensot with the bias of the first layer
-        ##########################
-
         return output_node, input_placeholder, label_placeholder, graph
 
 
@@ -211,13 +205,27 @@ def main(model, to_train, to_quantize, to_evaluate):
     if to_evaluate:
         output_node, input_placeholder, label_placeholder, graph = restore(model.output_pb_path, model)
         # get performance of the model
-        get_model_perf(evaluate, model.net_name, model.test_data[0], output_node, model.test_data[0],
-                       model.test_data[1], input_placeholder, label_placeholder, graph)
+        original_net_perf = get_model_perf(evaluate, model.net_name, model.test_data[0], output_node,
+                                           model.test_data[0], model.test_data[1], input_placeholder,
+                                           label_placeholder, graph)
+        original_net_perf.quantized = False
+        # set the size of the pb
+        original_net_perf.size = os.path.getsize(model.output_pb_path)
+        # set the path of the pb
+        original_net_perf.path = model.output_pb_path
         # the same with the quantized model
         output_node, input_placeholder, label_placeholder, graph = restore(model.output_quantized_graph, model)
-        get_model_perf(evaluate, "model_quant", model.test_data[0], output_node, model.test_data[0],
-                       model.test_data[1], input_placeholder, label_placeholder, graph)
-
+        quantized_net_perf = get_model_perf(evaluate, "model_quant", model.test_data[0], output_node,
+                                            model.test_data[0], model.test_data[1], input_placeholder,
+                                            label_placeholder, graph)
+        quantized_net_perf.quantized = True
+        # set the size of the pb
+        quantized_net_perf.size = os.path.getsize(model.output_quantized_graph)
+        # set the path of the pb
+        quantized_net_perf.path = model.output_quantized_graph
+        # print on a file the networks
+        f = open(model.checkpoint_prefix + '_performance')
+        json.dump([original_net_perf, quantized_net_perf], f)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=help)

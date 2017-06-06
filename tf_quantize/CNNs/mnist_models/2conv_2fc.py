@@ -47,7 +47,7 @@ class Mnist2Conv2Fc(ToBeQuantizedNetwork):
         x_image = tf.reshape(x, [-1, 28, 28, 1])  # give to the input the shape of the images
 
         # first convolution pooling layer
-        W_conv1 = cnnu.weight_variable([5, 5, 1, 32])
+        W_conv1 = cnnu.weight_variable([11, 11, 1, 32])
         b_conv1 = cnnu.bias_variable([32])
 
         h_conv1 = tf.nn.relu(cnnu.conv2d(x_image, W_conv1) + b_conv1)
@@ -114,7 +114,7 @@ class Mnist2Conv2Fc(ToBeQuantizedNetwork):
         train the network 
         export checkpoints and the metagraph description
         """
-        iterations = 1
+        iterations = 1000
         # initialize the variables
         self._sess.run(tf.global_variables_initializer())
         # training iterations
