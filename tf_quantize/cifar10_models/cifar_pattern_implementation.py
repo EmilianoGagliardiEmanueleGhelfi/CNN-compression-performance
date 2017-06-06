@@ -12,9 +12,10 @@ import tensorflow as tf
 from tf_quantize.pattern.pattern import ToBeQuantizedNetwork
 import cifar10_processing
 from tensorflow.contrib.learn.python.learn.datasets.mnist import DataSet
+import matplotlib.pyplot as plt
 
 BATCH_SIZE = 100
-STEPS = 10000
+STEPS = 20000
 
 # Global constants describing the CIFAR-10 data set.
 IMAGE_SIZE = cifar10_processing.IMG_SIZE
@@ -107,7 +108,7 @@ class Cifar10Network(ToBeQuantizedNetwork):
     checkpoint_path = 'cifar10_models/net_serialization/2conv_2fc'
     metagraph_path = 'cifar10_models/net_serialization/2conv_2fc/metagraph.pb'
     output_pb_path = 'cifar10_models/net_serialization/2conv_2fc/output_graph.pb'
-    output_quantized_graph = 'cifar10_models/net_serialization/2cov_2fc/quantized_graph.pb'
+    output_quantized_graph = 'cifar10_models/net_serialization/2conv_2fc/quantized_graph.pb'
 
     def __init__(self):
         self._dataset = None
