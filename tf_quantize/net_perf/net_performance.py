@@ -1,7 +1,7 @@
 """
 takes the output of perf and setup the attribute of the object net_object
 """
-
+import json
 
 def setup_net(perf_output, net_object):
     perf_output_list = perf_output.split("\n")
@@ -26,15 +26,19 @@ class NetPerformance:
     # path to the pb
     path = None
 
-    def __init__(self, net_name, accuracy, perf_output):
+    def __init__(self, net_name =None, accuracy= None, perf_output= None, json_dict = None):
         """
         :param net_name is the name of the net
         :param accuracy is the accuracy of the net in testing
         :param perf_output is the string output of perf_tool, to be parsed
+        :param json_string in the string representing this object
         """
-        self.name = net_name
-        self.accuracy = accuracy
-        setup_net(perf_output, self)
+        if json_dict is None:
+            self.name = net_name
+            self.accuracy = accuracy
+            setup_net(perf_output, self)
+        else:
+            self.__dict__ = json_dict
 
     def __str__(self):
         representation = ""

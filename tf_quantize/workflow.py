@@ -120,7 +120,7 @@ def get_model_perf(function_to_call, net_name, test_data, *args):
     """
     # get cache performance
     acc, perf_stdout = cache_perf_test(function_to_call, *args)
-    net_perf = NetPerformance(net_name, acc, perf_stdout)
+    net_perf = NetPerformance(net_name,float(acc), perf_stdout)
     # get test time
     # get test size, test_data is not a tensor, convert it with convert_to_tensor and get its shapes
     # shape[0] is the number of items, shape[1] is product of number of pixel I think
@@ -224,8 +224,9 @@ def main(model, to_train, to_quantize, to_evaluate):
         # set the path of the pb
         quantized_net_perf.path = model.output_quantized_graph
         # print on a file the networks
-        f = open(model.checkpoint_prefix + '_performance')
-        json.dump([original_net_perf, quantized_net_perf], f)
+        f = open(model.checkpoint_prefix + '_performance','w')
+        json.dump([original_net_perf.__dict__,quantized_net_perf.__dict__],f)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=help)

@@ -5,4 +5,5 @@
 .DS_Store
 **/MNIST_data/*
 tf_quantize/CNNs/mnist_models/net_serializations/*
+**/cifar10_models/net_serialization/*
 **/CIFAR10_data/*
