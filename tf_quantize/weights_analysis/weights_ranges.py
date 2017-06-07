@@ -23,25 +23,6 @@ def weights_ranges(pb_file):
         weights = [make_ndarray(node_def.attr['value'].tensor)
                    for node_def in graph_def.node
                    if node_def.attr['value'].tensor.dtype is not 0 and 'Variable' in node_def.name]
-
-    """
-    with tf.Graph().as_default() as graph:
-        tf.import_graph_def(
-            graph_def,
-            input_map=None,
-            return_elements=None,
-            op_dict=None,
-            name="prefix",
-            producer_op_list=None
-        )
-        names = [n.name for n in tf.get_default_graph().as_graph_def().node]
-        print 'let see if they are the same:'
-
-        if numpy.array_equal(tf.Session().run(graph.get_tensor_by_name(names[3] + ':0')), weights[0]):
-            print 'of course they are'
-        else:
-            print "they're fucking different"
-    """
     # now weights contains a sequence like: weights1, bias1, weights2, bias2...
     ranges = []
     # find the max and the min in the set composed by bias and weights for each layer
@@ -53,8 +34,6 @@ def weights_ranges(pb_file):
         max_bw = max([max_w, max_b])
         min_bw = min([min_w, min_b])
         ranges.append((min_bw, max_bw))
-    # plot TODO should not be done here
-    vis_square(weights[0].transpose(3, 1, 0, 2))
     return ranges
 
 

@@ -1,3 +1,11 @@
+"""
+For the net_performance files in input plots:
+- size of the original and the quantized network
+- accuracy of the original and the quantized
+- cache misses of the original and the quantized (L1-dcache-load-misses)
+- test time
+"""
+
 import argparse
 import matplotlib
 import matplotlib.pyplot as plt

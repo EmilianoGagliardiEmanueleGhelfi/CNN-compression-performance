@@ -5,23 +5,23 @@ CNN for mnist data set, with 2 couple convolution max pooling layer, and two ful
 
 import tensorflow as tf
 from tensorflow.examples.tutorials.mnist import input_data
-import CNNs.CNN_utility as cnnu
-from pattern.pattern import ToBeQuantizedNetwork
+import tf_quantize.CNNs.CNN_utility as cnnu
+from tf_quantize.pattern.pattern import ToBeQuantizedNetwork
 
 
-class Mnist2Conv2Fc(ToBeQuantizedNetwork):
+class BigMnist2Conv2Fc(ToBeQuantizedNetwork):
     test_data = None  # initialized in prepare, tuple with input, labels
     input_placeholder_name = 'input'
     label_placeholder_name = 'label'
     output_node_name = 'output'
-    net_name = "mnist_net_2conv_2Fc"
+    net_name = "mnist_net"
 
     # properties needed to export to pb in workflow. We put checkpoint data, meta graph
-    checkpoint_prefix = 'CNNs/mnist_models/net_serializations/2conv_2fc/net'
-    checkpoint_path = 'CNNs/mnist_models/net_serializations/2conv_2fc'
-    metagraph_path = 'CNNs/mnist_models/net_serializations/2conv_2fc/metagraph.pb'
-    output_pb_path = 'CNNs/mnist_models/net_serializations/2conv_2fc/output_graph.pb'
-    output_quantized_graph = 'CNNs/mnist_models/net_serializations/2conv_2fc/quantized_graph.pb'
+    checkpoint_prefix = 'CNNs/mnist_models/net_serializations/big_2conv_3fc/net'
+    checkpoint_path = 'CNNs/mnist_models/net_serializations/big_2conv_3fc'
+    metagraph_path = 'CNNs/mnist_models/net_serializations/big_2conv_3fc/metagraph.pb'
+    output_pb_path = 'CNNs/mnist_models/net_serializations/big_2conv_3fc/output_graph.pb'
+    output_quantized_graph = 'CNNs/mnist_models/net_serializations/big_2conv_3fc/quantized_graph.pb'
 
     def __init__(self):
         self._dataset = None
@@ -47,30 +47,36 @@ class Mnist2Conv2Fc(ToBeQuantizedNetwork):
         x_image = tf.reshape(x, [-1, 28, 28, 1])  # give to the input the shape of the images
 
         # first convolution pooling layer
-        W_conv1 = cnnu.weight_variable([5, 5, 1, 32])
-        b_conv1 = cnnu.bias_variable([32])
+        W_conv1 = cnnu.weight_variable([5, 5, 1, 64])
+        b_conv1 = cnnu.bias_variable([64])
 
         h_conv1 = tf.nn.relu(cnnu.conv2d(x_image, W_conv1) + b_conv1)
         h_pool1 = cnnu.max_pool_2x2(h_conv1)
 
         # second convolution pooling layer
-        W_conv2 = cnnu.weight_variable([5, 5, 32, 64])
-        b_conv2 = cnnu.bias_variable([64])
+        W_conv2 = cnnu.weight_variable([5, 5, 64, 128])
+        b_conv2 = cnnu.bias_variable([128])
         h_conv2 = tf.nn.relu(cnnu.conv2d(h_pool1, W_conv2) + b_conv2)
         h_pool2 = cnnu.max_pool_2x2(h_conv2)
 
         # densely connected layer
-        W_fc1 = cnnu.weight_variable([7 * 7 * 64, 1024])
-        b_fc1 = cnnu.bias_variable([1024])
+        W_fc1 = cnnu.weight_variable([7 * 7 * 128, 2048])
+        b_fc1 = cnnu.bias_variable([2048])
 
-        h_pool2_flat = tf.reshape(h_pool2, [-1, 7 * 7 * 64])
+        h_pool2_flat = tf.reshape(h_pool2, [-1, 7 * 7 * 128])
         h_fc1 = tf.nn.relu(tf.matmul(h_pool2_flat, W_fc1) + b_fc1)
 
-        # readout layer
-        W_fc2 = cnnu.weight_variable([1024, 10])
-        b_fc2 = cnnu.bias_variable([10])
+        # second densely connected layer
+        W_fc2 = cnnu.weight_variable([2048, 1024])
+        b_fc2 = cnnu.bias_variable([1024])
 
-        y_conv = tf.add(tf.matmul(h_fc1, W_fc2), b_fc2, name=self.output_node_name)
+        h_fc2 = tf.nn.relu(tf.matmul(h_fc1, W_fc2) + b_fc2)
+
+        # readout layer
+        W_fc3 = cnnu.weight_variable([1024, 10])
+        b_fc3 = cnnu.bias_variable([10])
+
+        y_conv = tf.add(tf.matmul(h_fc2, W_fc3), b_fc3, name=self.output_node_name)
 
         return x, y_conv, y_
 
@@ -111,10 +117,10 @@ class Mnist2Conv2Fc(ToBeQuantizedNetwork):
 
     def train(self):
         """
-        train the network 
+        train the network
         export checkpoints and the metagraph description
         """
-        iterations = 1000
+        iterations = 5000
         # initialize the variables
         self._sess.run(tf.global_variables_initializer())
         # training iterations
@@ -122,6 +128,8 @@ class Mnist2Conv2Fc(ToBeQuantizedNetwork):
             batch = self._dataset.train.next_batch(100)
             self._sess.run(fetches=self._train_step_node,
                            feed_dict={self._input_placeholder: batch[0], self._label_placeholder: batch[1]})
+            if i % 100 == 0:
+                print 'iteration: ' + str(i)
         self._save()
 
     def _save(self):
