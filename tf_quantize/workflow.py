@@ -210,9 +210,10 @@ def main(model, to_train, to_quantize, to_evaluate):
                                            label_placeholder, graph)
         original_net_perf.quantized = False
         original_net_perf.path = model.output_pb_path
+        original_net_perf.size = os.path.getsize(model.output_pb_path)
         # the same with the quantized model
         output_node, input_placeholder, label_placeholder, graph = restore(model.output_quantized_graph, model)
-        quantized_net_perf = get_model_perf(evaluate, model.net_name+'qunat', model.test_data[0], output_node,
+        quantized_net_perf = get_model_perf(evaluate, model.net_name+'_quant', model.test_data[0], output_node,
                                             model.test_data[0], model.test_data[1], input_placeholder,
                                             label_placeholder, graph)
         quantized_net_perf.quantized = True
