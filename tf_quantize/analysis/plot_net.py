@@ -12,6 +12,11 @@ import matplotlib.pyplot as plt
 import plotly.plotly as py
 import json
 import numpy as np
+from matplotlib import mlab
+import os
+import math
+
+import weights_ranges
 
 from tf_quantize.net_perf.net_performance import NetPerformance
 
@@ -19,7 +24,8 @@ help = 'This script takes in input performance files and plot comparisons betwee
 
 
 def plot(net_files):
-    print net_files
+    if not os.path.exists('img'):
+        os.mkdir('img')
     # deserialize file
     net_list = []
     for net_file in net_files:
@@ -43,7 +49,7 @@ def plot(net_files):
     bar_chart(original_size, quantized_size, (net_list[i].name for i in range(0, len(net_list), 2)), "File Size",
               "Comparison of size", "img/size.png")
     # l1 d cache load misses
-    misses = [n.L1_dcache_load_misses for n in net_list]
+    misses = [n.__dict__['L1-dcache-load-misses'] for n in net_list]
     original_misses = [misses[i] for i in range(0, len(misses), 2)]
     quantized_misses = [misses[i] for i in range(1, len(misses), 2)]
     bar_chart(original_misses, quantized_misses, (net_list[i].name for i in range(0, len(net_list), 2)), "Misses",
@@ -54,7 +60,12 @@ def plot(net_files):
     quantized_time = [test_time[i] for i in range(1, len(test_time), 2)]
     bar_chart(original_time, quantized_time, (net_list[i].name for i in range(0, len(net_list), 2)), "Inference Time",
               "Comparison of Inference time", "img/test_time.png")
+
     # plot weights
+    net_list_weights = [net_list[i] for i in range(0,len(net_list),2)]
+    for net in net_list_weights:
+        weights = weights_ranges.get_weights_from_pb(net.path)
+        histogram(weights, 'img/weights'+net.name+'.png', net.name)
 
 
 def bar_chart(original_data, quantized_data, xNames, yLabel, title,filename):
@@ -83,9 +94,23 @@ def bar_chart(original_data, quantized_data, xNames, yLabel, title,filename):
     plt.title(title)
     plt.xticks(x + width, xNames)
     plt.legend()
-    # save the figure, where?
+    plt.tight_layout()
+    plt.savefig(filename)
+    #plt.show()
+
+
+def histogram(weights_list, filename, net_name):
+    fig, axes = plt.subplots(nrows=int(math.ceil(float(len(weights_list))/float(2))), ncols=2)
+    ax_list = axes.flatten()
+    for i in range(0,len(weights_list)):
+        num_bins = 100
+        n, bins, patches = ax_list[i].hist(weights_list[i], num_bins)
+        ax_list[i].set_title('Layer '+str(i))
+    #fig.suptitle('Weights distribution for ' + net_name)
+    fig.tight_layout()
     plt.savefig(filename)
     plt.show()
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=help)
