@@ -5,8 +5,8 @@ CNN for mnist data set, with 2 couple convolution max pooling layer, and two ful
 
 import tensorflow as tf
 from tensorflow.examples.tutorials.mnist import input_data
-import tf_quantize.CNNs.CNN_utility as cnnu
-from tf_quantize.pattern.pattern import ToBeQuantizedNetwork
+import CNNs.CNN_utility as cnnu
+from pattern.pattern import ToBeQuantizedNetwork
 
 
 class Mnist2Conv2Fc(ToBeQuantizedNetwork):
@@ -14,7 +14,7 @@ class Mnist2Conv2Fc(ToBeQuantizedNetwork):
     input_placeholder_name = 'input'
     label_placeholder_name = 'label'
     output_node_name = 'output'
-    net_name = "mnist_net"
+    net_name = "mnist_net_2conv_2Fc"
 
     # properties needed to export to pb in workflow. We put checkpoint data, meta graph
     checkpoint_prefix = 'CNNs/mnist_models/net_serializations/2conv_2fc/net'

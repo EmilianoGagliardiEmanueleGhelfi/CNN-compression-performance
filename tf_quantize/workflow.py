@@ -8,7 +8,7 @@ import importlib
 from distutils.util import strtobool
 import json
 
-from tf_quantize.pattern.pattern import ToBeQuantizedNetwork
+from pattern.pattern import ToBeQuantizedNetwork
 
 help = 'This script takes as input a cnn implemented using tensorflow. The network have to be defined like the in the' \
        'example file mnist_patter_implemementation.py, extending the ToBeQuantizedNetwork abstract class in ' \
@@ -209,13 +209,10 @@ def main(model, to_train, to_quantize, to_evaluate):
                                            model.test_data[0], model.test_data[1], input_placeholder,
                                            label_placeholder, graph)
         original_net_perf.quantized = False
-        # set the size of the pb
-        original_net_perf.size = os.path.getsize(model.output_pb_path)
-        # set the path of the pb
         original_net_perf.path = model.output_pb_path
         # the same with the quantized model
         output_node, input_placeholder, label_placeholder, graph = restore(model.output_quantized_graph, model)
-        quantized_net_perf = get_model_perf(evaluate, "model_quant", model.test_data[0], output_node,
+        quantized_net_perf = get_model_perf(evaluate, model.net_name+'qunat', model.test_data[0], output_node,
                                             model.test_data[0], model.test_data[1], input_placeholder,
                                             label_placeholder, graph)
         quantized_net_perf.quantized = True
@@ -225,7 +222,7 @@ def main(model, to_train, to_quantize, to_evaluate):
         quantized_net_perf.path = model.output_quantized_graph
         # print on a file the networks
         f = open(model.checkpoint_prefix + '_performance','w')
-        json.dump([original_net_perf.__dict__,quantized_net_perf.__dict__],f)
+        json.dump([original_net_perf.__dict__,quantized_net_perf.__dict__],f,indent=4)
 
 
 if __name__ == '__main__':
