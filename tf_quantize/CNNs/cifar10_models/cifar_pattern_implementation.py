@@ -13,8 +13,8 @@ from tensorflow.contrib.learn.python.learn.datasets.mnist import DataSet
 import os
 
 import cifar10_processing
-import tf_quantize.CNNs.CNN_utility as cnnu
-from tf_quantize.pattern.pattern import ToBeQuantizedNetwork
+import CNNs.CNN_utility as cnnu
+from pattern.pattern import ToBeQuantizedNetwork
 
 BATCH_SIZE = 100
 STEPS = 20000
@@ -188,7 +188,7 @@ class Cifar10Network(ToBeQuantizedNetwork):
         self.test_data = (test_images, test_labels)
         self._input_placeholder, self._output_placeholder, self._label_placeholder = self._inference()
         loss_node = self._loss(self._output_placeholder, self._label_placeholder)
-        self._accuracy_node = self.accuracy(self.out)
+        self._accuracy_node = self.accuracy(self._output_placeholder,self._label_placeholder)
         self._train_step_node = self._train(loss_node)
 
     def train(self):
@@ -207,8 +207,11 @@ class Cifar10Network(ToBeQuantizedNetwork):
             batch = self._dataset.next_batch(BATCH_SIZE)
             self._sess.run(fetches=self._train_step_node,
                            feed_dict={self._input_placeholder: batch[0], self._label_placeholder: batch[1]})
-            if i%100 == 0:
-                print "Iteration "+str(i) + "Acc " +
+            if i % 100 == 0:
+                # run the accuracy node
+                acc = self._sess.run(fetches=self._accuracy_node,
+                                     feed_dict={self._input_placeholder: self.test_data[0], self._label_placeholder: self.test_data[1]})
+                print "Iteration "+str(i) + ", Acc " + str(acc)
         self._save()
 
     def accuracy(self,output_node,label_placeholder):

@@ -11,14 +11,17 @@ help = 'This script takes in input a pb file, restores the weights of the networ
        'each layer '
 
 
-def plot(net_file):
-    print net_file
+def plot(net_files):
+    print net_files
     # deserialize file
-    with open(net_file, 'r') as data_file:
-        nets = json.load(data_file)
-    net1 = NetPerformance(json_dict=nets[0])
-    net2 = NetPerformance(json_dict=nets[1])
-    bar_chart([net1.accuracy/net2.accuracy])
+    net_list = []
+    for net_file in net_files:
+        with open(net_file, 'r') as data_file:
+            nets = json.load(data_file)
+        net1 = NetPerformance(json_dict=nets[0])
+        net2 = NetPerformance(json_dict=nets[1])
+        net_list.append([net1, net2])
+    bar_chart([x[1].accuracy/x[0].accuracy for x in net_list])
 
 
 def bar_chart(y):
@@ -29,12 +32,12 @@ def bar_chart(y):
     # length of the array, to get the correct indexes
     N = len(y)
     # index of elements
-    x = range(N)
+    x = range(1,N+1)
     # width of the bar
-    width = 0.5
+    width = 0.2
     plt.bar(x, y, width, color="blue")
     # x min, x max, y min, y max
-    plt.axis([0.0, 2, 0, 1.5])
+    plt.axis([0.0, 2*N, 0, 1.5])
     ax = plt.gca()
     ax.set_autoscale_on(False)
     # save the figure, where?
@@ -44,7 +47,7 @@ def bar_chart(y):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=help)
-    parser.add_argument('--net_file', type=str, nargs=1, help='file created by workflow program')
+    parser.add_argument('--net_file', type=str, nargs='+', help='files created by workflow program')
     args = parser.parse_args()
-    plot(args.net_file[0])
+    plot(args.net_file)
 
