@@ -14,9 +14,16 @@ from tensorflow.contrib.learn.python.learn.datasets.mnist import DataSet
 import cifar10_processing
 import tf_quantize.CNNs.CNN_utility as cnnu
 from tf_quantize.pattern.pattern import ToBeQuantizedNetwork
+import os
 
 BATCH_SIZE = 100
 STEPS = 20000
+NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 50000
+# Constants describing the training process.
+MOVING_AVERAGE_DECAY = 0.9999     # The decay to use for the moving average.
+NUM_EPOCHS_PER_DECAY = 350.0      # Epochs after which learning rate decays.
+LEARNING_RATE_DECAY_FACTOR = 0.1  # Learning rate decay factor.
+INITIAL_LEARNING_RATE = 0.1       # Initial learning rate.
 
 # Global constants describing the CIFAR-10 data set.
 IMAGE_SIZE = cifar10_processing.IMG_SIZE
@@ -55,7 +62,7 @@ class Cifar10Network(ToBeQuantizedNetwork):
     input_placeholder_name = 'input'
     label_placeholder_name = 'label'
     output_node_name = 'output'
-    net_name = "cifar10_net"
+    net_name = "cifar10_net_11conv_fc"
 
     # properties needed to export to pb in workflow. We put checkpoint data, meta graph
     checkpoint_prefix = 'CNNS/cifar10_models/net_serialization/2conv11_2fc/net'
@@ -72,6 +79,7 @@ class Cifar10Network(ToBeQuantizedNetwork):
         self._label_placeholder = None
         self._train_step_node = None
         self._sess = tf.Session()
+        self._accuracy_node = None
 
     def _loss(self, logits, labels):
         """Add L2Loss to all the trainable variables.
@@ -89,7 +97,7 @@ class Cifar10Network(ToBeQuantizedNetwork):
         cross_entropy_mean = tf.reduce_mean(cross_entropy, name='cross_entropy')
         return cross_entropy_mean
 
-    def _train(self, total_loss):
+    def _train(self, total_loss,global_step):
         """Train CIFAR-10 model.
         Create an optimizer and apply to all trainable variables.
         Args:
@@ -97,9 +105,24 @@ class Cifar10Network(ToBeQuantizedNetwork):
         Returns:
           train_op: op for training.
         """
-        train_step = tf.train.AdamOptimizer(1e-4).minimize(total_loss)
+        # Variables that affect learning rate.
+        num_batches_per_epoch = NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN / BATCH_SIZE
+        decay_steps = int(num_batches_per_epoch * NUM_EPOCHS_PER_DECAY)
 
-        return train_step
+        # Decay the learning rate exponentially based on the number of steps.
+        lr = tf.train.exponential_decay(INITIAL_LEARNING_RATE,
+                                        global_step,
+                                        decay_steps,
+                                        LEARNING_RATE_DECAY_FACTOR,
+                                        staircase=True)
+
+        opt = tf.train.GradientDescentOptimizer(lr)
+        grads = opt.compute_gradients(total_loss)
+
+        # Apply gradients.
+        train_op = opt.apply_gradients(grads, global_step=global_step)
+
+        return train_op
 
     def _inference(self):
         """Build the CIFAR-10 model.
@@ -185,8 +208,10 @@ class Cifar10Network(ToBeQuantizedNetwork):
         self._dataset = DataSet(images, labels, one_hot=True, reshape=False)
         self.test_data = (test_images, test_labels)
         self._input_placeholder, self._output_placeholder, self._label_placeholder = self._inference()
+        global_step = tf.contrib.framework.get_or_create_global_step()
         loss_node = self._loss(self._output_placeholder, self._label_placeholder)
-        self._train_step_node = self._train(loss_node)
+        self._accuracy_node = self.accuracy(self._output_placeholder, self._label_placeholder)
+        self._train_step_node = self._train(loss_node, global_step)
 
     def train(self):
         """
@@ -194,15 +219,36 @@ class Cifar10Network(ToBeQuantizedNetwork):
         export checkpoints and the metagraph description
         """
         # initialize the variables
-        self._sess.run(tf.global_variables_initializer())
+        saver = tf.train.Saver()
+        if os.path.exists(self.checkpoint_prefix + '.pb'):
+            saver.restore(self._sess, self.checkpoint_prefix)
+        else:
+            self._sess.run(tf.global_variables_initializer())
         # training iterations
         for i in range(STEPS + 1):
             batch = self._dataset.next_batch(BATCH_SIZE)
             self._sess.run(fetches=self._train_step_node,
                            feed_dict={self._input_placeholder: batch[0], self._label_placeholder: batch[1]})
-            if i%100 == 0:
-                print "Iteration "+str(i)
+            if i%500 == 0:
+                # run the accuracy node
+                acc = self._sess.run(fetches=self._accuracy_node,
+                                     feed_dict={self._input_placeholder: self.test_data[0],
+                                                self._label_placeholder: self.test_data[1]})
+                print "Iteration " + str(i) + ", Acc " + str(acc)
+                saver.save(self._sess, self.checkpoint_prefix, meta_graph_suffix='pb')
+
         self._save()
+
+    def accuracy(self, output_node, label_placeholder):
+        """
+        Get the output node and attach to it the accuracy node
+        :param output_node: the output of the net
+        :param label_placeholder:
+        :return: the accuracy node
+        """
+        correct_prediction = tf.equal(tf.argmax(output_node, 1), tf.argmax(label_placeholder, 1))
+        accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+        return accuracy
 
     def _save(self):
         saver = tf.train.Saver()

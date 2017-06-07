@@ -150,8 +150,8 @@ class Cifar10Network(ToBeQuantizedNetwork):
 
         # local3
         # Move everything into depth so we can perform a single matrix multiply.
-        reshape = tf.reshape(pool2, [-1, 8*8*64])
-        weights_1 = cnnu.weight_variable([8*8*64, 384])
+        reshape = tf.reshape(pool2, [-1, 8 * 8 * 64])
+        weights_1 = cnnu.weight_variable([8 * 8 * 64, 384])
 
         biases_1 = cnnu.bias_variable([384])
         local3 = tf.nn.relu(tf.matmul(reshape, weights_1) + biases_1, name='local3')
@@ -188,7 +188,7 @@ class Cifar10Network(ToBeQuantizedNetwork):
         self.test_data = (test_images, test_labels)
         self._input_placeholder, self._output_placeholder, self._label_placeholder = self._inference()
         loss_node = self._loss(self._output_placeholder, self._label_placeholder)
-        self._accuracy_node = self.accuracy(self._output_placeholder,self._label_placeholder)
+        self._accuracy_node = self.accuracy(self._output_placeholder, self._label_placeholder)
         self._train_step_node = self._train(loss_node)
 
     def train(self):
@@ -198,7 +198,7 @@ class Cifar10Network(ToBeQuantizedNetwork):
         """
         # initialize the variables
         saver = tf.train.Saver()
-        if os.path.exists(self.checkpoint_prefix+'.pb'):
+        if os.path.exists(self.checkpoint_prefix + '.pb'):
             saver.restore(self._sess, self.checkpoint_prefix)
         else:
             self._sess.run(tf.global_variables_initializer())
@@ -210,11 +210,12 @@ class Cifar10Network(ToBeQuantizedNetwork):
             if i % 100 == 0:
                 # run the accuracy node
                 acc = self._sess.run(fetches=self._accuracy_node,
-                                     feed_dict={self._input_placeholder: self.test_data[0], self._label_placeholder: self.test_data[1]})
-                print "Iteration "+str(i) + ", Acc " + str(acc)
+                                     feed_dict={self._input_placeholder: self.test_data[0],
+                                                self._label_placeholder: self.test_data[1]})
+                print "Iteration " + str(i) + ", Acc " + str(acc)
                 saver.save(self._sess, self.checkpoint_prefix, meta_graph_suffix='pb')
 
-    def accuracy(self,output_node,label_placeholder):
+    def accuracy(self, output_node, label_placeholder):
         """
         Get the output node and attach to it the accuracy node
         :param output_node: the output of the net
