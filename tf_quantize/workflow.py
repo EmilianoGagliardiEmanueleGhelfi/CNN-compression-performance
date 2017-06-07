@@ -222,8 +222,8 @@ def main(model, to_train, to_quantize, to_evaluate):
         # set the path of the pb
         quantized_net_perf.path = model.output_quantized_graph
         # print on a file the networks
-        f = open(model.checkpoint_prefix + '_performance','w')
-        json.dump([original_net_perf.__dict__,quantized_net_perf.__dict__],f,indent=4)
+        f = open(model.checkpoint_prefix + '_' + model.net_name + '_performance', 'w')
+        json.dump([original_net_perf.__dict__, quantized_net_perf.__dict__], f, indent=4)
 
 
 if __name__ == '__main__':

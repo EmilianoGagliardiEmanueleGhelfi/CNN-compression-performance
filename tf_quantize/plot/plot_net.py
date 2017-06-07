@@ -35,25 +35,25 @@ def plot(net_files):
     original_acc = [accuracy_list[i] for i in range(0, len(accuracy_list), 2)]
     quantized_acc = [accuracy_list[i] for i in range(1, len(accuracy_list), 2)]
     bar_chart(original_acc, quantized_acc, (net_list[i].name for i in range(0, len(net_list),2)), "Accuracy",
-              "Comparison of accuracies","acc.png")
+              "Comparison of accuracies", "img/acc.png")
     # file size
     file_size = [n.size for n in net_list]
     original_size = [file_size[i] for i in range(0, len(file_size), 2)]
     quantized_size = [file_size[i] for i in range(1, len(file_size), 2)]
     bar_chart(original_size, quantized_size, (net_list[i].name for i in range(0, len(net_list), 2)), "File Size",
-              "Comparison of size", "size.png")
+              "Comparison of size", "img/size.png")
     # l1 d cache load misses
-    misses = [n.__dict__['L1-dcache-load-misses'] for n in net_list]
+    misses = [n.L1_dcache_load_misses for n in net_list]
     original_misses = [misses[i] for i in range(0, len(misses), 2)]
     quantized_misses = [misses[i] for i in range(1, len(misses), 2)]
     bar_chart(original_misses, quantized_misses, (net_list[i].name for i in range(0, len(net_list), 2)), "Misses",
-              "Comparison of l1 dcache misses", "misses.png")
+              "Comparison of l1 dcache load misses", "img/misses.png")
     # test time
     test_time = [n.test_time for n in net_list]
     original_time = [test_time[i] for i in range(0, len(test_time), 2)]
     quantized_time = [test_time[i] for i in range(1, len(test_time), 2)]
     bar_chart(original_time, quantized_time, (net_list[i].name for i in range(0, len(net_list), 2)), "Inference Time",
-              "Comparison of Inference time", "test_time.png")
+              "Comparison of Inference time", "img/test_time.png")
     # plot weights
 
 

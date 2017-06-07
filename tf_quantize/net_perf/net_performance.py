@@ -10,7 +10,7 @@ def setup_net(perf_output, net_object):
         if line != "":
             values = line.split(",")
             attr_value = values[0]
-            attr_name = values[2]
+            attr_name = values[2].replace('-', '_')
             setattr(net_object, attr_name, attr_value)
 
 
