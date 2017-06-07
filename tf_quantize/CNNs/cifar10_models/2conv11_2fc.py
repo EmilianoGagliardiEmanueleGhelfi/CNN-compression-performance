@@ -10,7 +10,6 @@ Summary of available functions:
 
 import tensorflow as tf
 from tensorflow.contrib.learn.python.learn.datasets.mnist import DataSet
-import os
 
 import cifar10_processing
 import tf_quantize.CNNs.CNN_utility as cnnu
@@ -59,11 +58,11 @@ class Cifar10Network(ToBeQuantizedNetwork):
     net_name = "cifar10_net"
 
     # properties needed to export to pb in workflow. We put checkpoint data, meta graph
-    checkpoint_prefix = 'CNNS/cifar10_models/net_serialization/2conv_2fc/net'
-    checkpoint_path = 'CNNS/cifar10_models/net_serialization/2conv_2fc'
-    metagraph_path = 'CNNS/cifar10_models/net_serialization/2conv_2fc/metagraph.pb'
-    output_pb_path = 'CNNS/cifar10_models/net_serialization/2conv_2fc/output_graph.pb'
-    output_quantized_graph = 'CNNS/cifar10_models/net_serialization/2conv_2fc/quantized_graph.pb'
+    checkpoint_prefix = 'CNNS/cifar10_models/net_serialization/2conv11_2fc/net'
+    checkpoint_path = 'CNNS/cifar10_models/net_serialization/2conv11_2fc'
+    metagraph_path = 'CNNS/cifar10_models/net_serialization/2conv11_2fc/metagraph.pb'
+    output_pb_path = 'CNNS/cifar10_models/net_serialization/2conv11_2fc/output_graph.pb'
+    output_quantized_graph = 'CNNS/cifar10_models/net_serialization/2conv11_2fc/quantized_graph.pb'
 
     def __init__(self):
         self._dataset = None
@@ -73,7 +72,6 @@ class Cifar10Network(ToBeQuantizedNetwork):
         self._label_placeholder = None
         self._train_step_node = None
         self._sess = tf.Session()
-        self._accuracy_node = None
 
     def _loss(self, logits, labels):
         """Add L2Loss to all the trainable variables.
@@ -120,7 +118,7 @@ class Cifar10Network(ToBeQuantizedNetwork):
         y_ = tf.placeholder(tf.float32, shape=[None, 10], name=self.label_placeholder_name)
         # conv1
         with tf.variable_scope('conv1') as scope:
-            kernel = cnnu.weight_variable([5, 5, 3, 64])
+            kernel = cnnu.weight_variable([11, 11, 3, 64])
             conv = tf.nn.conv2d(x, kernel, [1, 1, 1, 1], padding='SAME')
             biases = cnnu.bias_variable([64])
             pre_activation = tf.nn.bias_add(conv, biases)
@@ -151,13 +149,13 @@ class Cifar10Network(ToBeQuantizedNetwork):
         # local3
         # Move everything into depth so we can perform a single matrix multiply.
         reshape = tf.reshape(pool2, [-1, 8*8*64])
-        weights_1 = cnnu.weight_variable([8*8*64, 384])
+        weights_1 = cnnu.weight_variable([8*8*64, 1024])
 
-        biases_1 = cnnu.bias_variable([384])
+        biases_1 = cnnu.bias_variable([1024])
         local3 = tf.nn.relu(tf.matmul(reshape, weights_1) + biases_1, name='local3')
 
         # local4
-        weights_2 = cnnu.weight_variable([384, 192])
+        weights_2 = cnnu.weight_variable([1024, 192])
         biases_2 = cnnu.bias_variable([192])
         local4 = tf.nn.relu(tf.matmul(local3, weights_2) + biases_2, name='local4')
 
@@ -188,7 +186,6 @@ class Cifar10Network(ToBeQuantizedNetwork):
         self.test_data = (test_images, test_labels)
         self._input_placeholder, self._output_placeholder, self._label_placeholder = self._inference()
         loss_node = self._loss(self._output_placeholder, self._label_placeholder)
-        self._accuracy_node = self.accuracy(self.out)
         self._train_step_node = self._train(loss_node)
 
     def train(self):
@@ -197,30 +194,15 @@ class Cifar10Network(ToBeQuantizedNetwork):
         export checkpoints and the metagraph description
         """
         # initialize the variables
-        if os.path.exists(self.checkpoint_prefix+'.pb'):
-            saver = tf.train.Saver()
-            saver.restore(self._sess, self.checkpoint_prefix)
-        else:
-            self._sess.run(tf.global_variables_initializer())
+        self._sess.run(tf.global_variables_initializer())
         # training iterations
         for i in range(STEPS + 1):
             batch = self._dataset.next_batch(BATCH_SIZE)
             self._sess.run(fetches=self._train_step_node,
                            feed_dict={self._input_placeholder: batch[0], self._label_placeholder: batch[1]})
             if i%100 == 0:
-                print "Iteration "+str(i) + "Acc " +
+                print "Iteration "+str(i)
         self._save()
-
-    def accuracy(self,output_node,label_placeholder):
-        """
-        Get the output node and attach to it the accuracy node
-        :param output_node: the output of the net
-        :param label_placeholder:
-        :return: the accuracy node
-        """
-        correct_prediction = tf.equal(tf.argmax(output_node, 1), tf.argmax(label_placeholder, 1))
-        accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-        return accuracy
 
     def _save(self):
         saver = tf.train.Saver()

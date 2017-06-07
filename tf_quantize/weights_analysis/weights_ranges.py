@@ -24,7 +24,7 @@ def weights_ranges(pb_file):
                    for node_def in graph_def.node
                    if node_def.attr['value'].tensor.dtype is not 0 and 'Variable' in node_def.name]
 
-    # TODO only used to make a comparison
+    """
     with tf.Graph().as_default() as graph:
         tf.import_graph_def(
             graph_def,
@@ -41,8 +41,7 @@ def weights_ranges(pb_file):
             print 'of course they are'
         else:
             print "they're fucking different"
-    # TODO end
-
+    """
     # now weights contains a sequence like: weights1, bias1, weights2, bias2...
     ranges = []
     # find the max and the min in the set composed by bias and weights for each layer
