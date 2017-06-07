@@ -17,7 +17,7 @@ import CNNs.CNN_utility as cnnu
 from pattern.pattern import ToBeQuantizedNetwork
 
 BATCH_SIZE = 100
-STEPS = 20000
+STEPS = 10000
 
 # Global constants describing the CIFAR-10 data set.
 IMAGE_SIZE = cifar10_processing.IMG_SIZE
@@ -197,8 +197,8 @@ class Cifar10Network(ToBeQuantizedNetwork):
         export checkpoints and the metagraph description
         """
         # initialize the variables
+        saver = tf.train.Saver()
         if os.path.exists(self.checkpoint_prefix+'.pb'):
-            saver = tf.train.Saver()
             saver.restore(self._sess, self.checkpoint_prefix)
         else:
             self._sess.run(tf.global_variables_initializer())
@@ -212,7 +212,7 @@ class Cifar10Network(ToBeQuantizedNetwork):
                 acc = self._sess.run(fetches=self._accuracy_node,
                                      feed_dict={self._input_placeholder: self.test_data[0], self._label_placeholder: self.test_data[1]})
                 print "Iteration "+str(i) + ", Acc " + str(acc)
-        self._save()
+                saver.save(self._sess, self.checkpoint_prefix, meta_graph_suffix='pb')
 
     def accuracy(self,output_node,label_placeholder):
         """

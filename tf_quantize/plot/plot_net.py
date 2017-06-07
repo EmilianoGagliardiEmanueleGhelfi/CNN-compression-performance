@@ -7,8 +7,7 @@ import numpy as np
 
 from tf_quantize.net_perf.net_performance import NetPerformance
 
-help = 'This script takes in input a pb file, restores the weights of the network, and then computes the ranges for ' \
-       'each layer '
+help = 'This script takes in input performance files and plot comparisons between original and quantized network'
 
 
 def plot(net_files):
@@ -23,43 +22,62 @@ def plot(net_files):
         net_list.append(net1)
         net_list.append(net2)
 
-    bar_chart(net_list)
-
-
-def bar_chart(nets):
-    """
-    Plot a barchart
-    :param y: the y-values to plot as couple
-    """
-    # plot accuracy
-    accuracy_list = [n.accuracy for n in nets]
+    # accuracy
+    accuracy_list = [n.accuracy for n in net_list]
     original_acc = [accuracy_list[i] for i in range(0, len(accuracy_list), 2)]
     quantized_acc = [accuracy_list[i] for i in range(1, len(accuracy_list), 2)]
+    bar_chart(original_acc, quantized_acc, (net_list[i].name for i in range(0, len(net_list),2)), "Accuracy",
+              "Comparison of accuracies","acc.png")
+    # file size
+    file_size = [n.size for n in net_list]
+    original_size = [file_size[i] for i in range(0, len(file_size), 2)]
+    quantized_size = [file_size[i] for i in range(1, len(file_size), 2)]
+    bar_chart(original_size, quantized_size, (net_list[i].name for i in range(0, len(net_list), 2)), "File Size",
+              "Comparison of size", "size.png")
+    # l1 d cache load misses
+    misses = [n.__dict__['L1-dcache-load-misses'] for n in net_list]
+    original_misses = [misses[i] for i in range(0, len(misses), 2)]
+    quantized_misses = [misses[i] for i in range(1, len(misses), 2)]
+    bar_chart(original_misses, quantized_misses, (net_list[i].name for i in range(0, len(net_list), 2)), "Misses",
+              "Comparison of l1 dcache misses", "misses.png")
+    # test time
+    test_time = [n.test_time for n in net_list]
+    original_time = [test_time[i] for i in range(0, len(test_time), 2)]
+    quantized_time = [test_time[i] for i in range(1, len(test_time), 2)]
+    bar_chart(original_time, quantized_time, (net_list[i].name for i in range(0, len(net_list), 2)), "Inference Time",
+              "Comparison of Inference time", "test_time.png")
+    # plot weights
+
+
+def bar_chart(original_data, quantized_data, xNames, yLabel, title,filename):
+    """
+    :param original_data: original data to plot
+    :param quantized_data: quantized data to plot
+    :param xNames: names on the x axes
+    :param yLabel: Label of y axis
+    :param title: title of the plot
+    :param filename: filename to write
+    :return:
+    """
     # length of the array, to get the correct indexes
-    N = len(original_acc)
+    N = len(original_data)
     # index of elements
     x = np.arange(N)
     # width of the bar
     width = 0.2
-    rects1 = plt.bar(x, original_acc, width,
+    rects1 = plt.bar(x, original_data, width,
                      color='b',
                      label='Original')
-    rects2 = plt.bar(x + width, quantized_acc, width,
+    rects2 = plt.bar(x + width, quantized_data, width,
                      color='r',
                      label='Quantized')
-    plt.xlabel('Nets')
-    plt.ylabel('Accuracy')
-    plt.title('Comparison of accuracies')
-    plt.xticks(x + width, (nets[i].name for i in range(0, len(nets), 2)))
+    plt.ylabel(yLabel)
+    plt.title(title)
+    plt.xticks(x + width, xNames)
     plt.legend()
-    # x min, x max, y min, y max
-    # plt.axis([0.0, 2*N, 0, 1.5])
-    # ax = plt.gca()
-    # ax.set_autoscale_on(False)
     # save the figure, where?
-    plt.savefig('acc_bar.png')
+    plt.savefig(filename)
     plt.show()
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=help)
