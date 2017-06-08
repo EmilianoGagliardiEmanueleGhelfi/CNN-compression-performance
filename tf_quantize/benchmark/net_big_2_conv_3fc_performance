@@ -1,0 +1,34 @@
+[
+    {
+        "test_time": 0.0010660297, 
+        "name": "big_2_conv_3fc", 
+        "quantized": false, 
+        "LLC_loads": "314810367", 
+        "L1_dcache_stores": "4727145770", 
+        "cache_references": "2146444778", 
+        "LLC_store_misses": "193341202", 
+        "cache_misses": "855763787", 
+        "L1_dcache_loads": "64661758309", 
+        "path": "CNNs/mnist_models/net_serializations/big_2conv_3fc/output_graph.pb", 
+        "size": 60651480, 
+        "L1_dcache_load_misses": "7729364192", 
+        "LLC_load_misses": "62228771", 
+        "accuracy": 0.9836999773979187
+    }, 
+    {
+        "test_time": 0.0027081873, 
+        "name": "big_2_conv_3fc_quant", 
+        "quantized": true, 
+        "LLC_loads": "268132186", 
+        "L1_dcache_stores": "8176521272", 
+        "cache_references": "2928455172", 
+        "LLC_store_misses": "144074307", 
+        "cache_misses": "1884483745", 
+        "L1_dcache_loads": "52232992799", 
+        "path": "CNNs/mnist_models/net_serializations/big_2conv_3fc/quantized_graph.pb", 
+        "size": 15182552, 
+        "L1_dcache_load_misses": "5058299835", 
+        "LLC_load_misses": "74274296", 
+        "accuracy": 0.982200026512146
+    }
+]
