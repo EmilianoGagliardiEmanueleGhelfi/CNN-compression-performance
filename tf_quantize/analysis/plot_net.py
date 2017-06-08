@@ -95,7 +95,7 @@ def bar_chart(original_data, quantized_data, xNames, yLabel, title,filename):
                      label='Quantized')
     plt.ylabel(yLabel)
     plt.title(title)
-    plt.xticks(x + width, xNames)
+    plt.xticks(x + width, xNames, rotation = 45)
     plt.legend()
     plt.tight_layout()
     plt.savefig(filename)
