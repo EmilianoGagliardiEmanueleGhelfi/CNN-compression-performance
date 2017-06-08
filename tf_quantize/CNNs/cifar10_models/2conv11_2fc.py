@@ -17,7 +17,7 @@ from tf_quantize.pattern.pattern import ToBeQuantizedNetwork
 import os
 
 BATCH_SIZE = 100
-STEPS = 20000
+STEPS = 200000
 NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 50000
 # Constants describing the training process.
 MOVING_AVERAGE_DECAY = 0.9999     # The decay to use for the moving average.
@@ -229,7 +229,7 @@ class Cifar10Network(ToBeQuantizedNetwork):
             batch = self._dataset.next_batch(BATCH_SIZE)
             self._sess.run(fetches=self._train_step_node,
                            feed_dict={self._input_placeholder: batch[0], self._label_placeholder: batch[1]})
-            if i%500 == 0:
+            if i%1000 == 0:
                 # run the accuracy node
                 acc = self._sess.run(fetches=self._accuracy_node,
                                      feed_dict={self._input_placeholder: self.test_data[0],

@@ -7,6 +7,7 @@ Summary of available functions:
  # Create a graph to run one step of training with respect to the loss.
  train_op = train(loss, global_step)
 """
+import pprint
 
 import tensorflow as tf
 from tensorflow.contrib.learn.python.learn.datasets.mnist import DataSet
@@ -74,6 +75,7 @@ class Cifar10Network(ToBeQuantizedNetwork):
         self._train_step_node = None
         self._sess = tf.Session()
         self._accuracy_node = None
+        self._loss_node = None
 
     def _loss(self, logits, labels):
         """Add L2Loss to all the trainable variables.
@@ -99,7 +101,7 @@ class Cifar10Network(ToBeQuantizedNetwork):
         Returns:
           train_op: op for training.
         """
-        train_step = tf.train.AdamOptimizer(1e-4).minimize(total_loss)
+        train_step = tf.train.AdamOptimizer(0.01).minimize(total_loss)
 
         return train_step
 
@@ -119,30 +121,28 @@ class Cifar10Network(ToBeQuantizedNetwork):
         x = tf.placeholder(tf.float32, shape=[None, IMAGE_SIZE, IMAGE_SIZE, 3], name=self.input_placeholder_name)
         y_ = tf.placeholder(tf.float32, shape=[None, 10], name=self.label_placeholder_name)
         # conv1
-        with tf.variable_scope('conv1') as scope:
-            kernel = cnnu.weight_variable([5, 5, 3, 64])
-            conv = tf.nn.conv2d(x, kernel, [1, 1, 1, 1], padding='SAME')
-            biases = cnnu.bias_variable([64])
-            pre_activation = tf.nn.bias_add(conv, biases)
-            conv1 = tf.nn.relu(pre_activation, name=scope.name)
+        kernel1 = cnnu.weight_variable([5, 5, 3, 64])
+        conv1 = tf.nn.conv2d(x, kernel1, [1, 1, 1, 1], padding='SAME')
+        biases1 = cnnu.bias_variable([64])
+        pre_activation = tf.nn.bias_add(conv1, biases1)
+        relu1 = tf.nn.relu(pre_activation)
 
         # pool1
-        pool1 = tf.nn.max_pool(conv1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
+        pool1 = tf.nn.max_pool(relu1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
                                padding='SAME', name='pool1')
         # norm1
         norm1 = tf.nn.lrn(pool1, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75,
                           name='norm1')
 
         # conv2
-        with tf.variable_scope('conv2') as scope:
-            kernel = cnnu.weight_variable([5, 5, 64, 64])
-            conv = tf.nn.conv2d(norm1, kernel, [1, 1, 1, 1], padding='SAME')
-            biases = cnnu.bias_variable([64])
-            pre_activation = tf.nn.bias_add(conv, biases)
-            conv2 = tf.nn.relu(pre_activation, name=scope.name)
+        kernel2 = cnnu.weight_variable([5, 5, 64, 64])
+        conv2 = tf.nn.conv2d(norm1, kernel2, [1, 1, 1, 1], padding='SAME')
+        biases2 = cnnu.bias_variable([64])
+        pre_activation2 = tf.nn.bias_add(conv2, biases2)
+        relu2 = tf.nn.relu(pre_activation2)
 
         # norm2
-        norm2 = tf.nn.lrn(conv2, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75,
+        norm2 = tf.nn.lrn(relu2, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75,
                           name='norm2')
         # pool2
         pool2 = tf.nn.max_pool(norm2, ksize=[1, 3, 3, 1],
@@ -187,9 +187,9 @@ class Cifar10Network(ToBeQuantizedNetwork):
         self._dataset = DataSet(images, labels, one_hot=True, reshape=False)
         self.test_data = (test_images, test_labels)
         self._input_placeholder, self._output_placeholder, self._label_placeholder = self._inference()
-        loss_node = self._loss(self._output_placeholder, self._label_placeholder)
+        self._loss_node = self._loss(self._output_placeholder, self._label_placeholder)
         self._accuracy_node = self.accuracy(self._output_placeholder, self._label_placeholder)
-        self._train_step_node = self._train(loss_node)
+        self._train_step_node = self._train(self._loss_node)
 
     def train(self):
         """
@@ -198,21 +198,23 @@ class Cifar10Network(ToBeQuantizedNetwork):
         """
         # initialize the variables
         saver = tf.train.Saver()
-        if os.path.exists(self.checkpoint_prefix + '.pb'):
-            saver.restore(self._sess, self.checkpoint_prefix)
-        else:
-            self._sess.run(tf.global_variables_initializer())
+        #if os.path.exists(self.checkpoint_prefix + '.pb'):
+            #saver.restore(self._sess, self.checkpoint_prefix)
+        #else:
+        self._sess.run(tf.global_variables_initializer())
         # training iterations
         for i in range(STEPS + 1):
             batch = self._dataset.next_batch(BATCH_SIZE)
             self._sess.run(fetches=self._train_step_node,
                            feed_dict={self._input_placeholder: batch[0], self._label_placeholder: batch[1]})
-            if i % 100 == 0:
+            if i % 200 == 0:
                 # run the accuracy node
                 acc = self._sess.run(fetches=self._accuracy_node,
                                      feed_dict={self._input_placeholder: self.test_data[0],
                                                 self._label_placeholder: self.test_data[1]})
-                print "Iteration " + str(i) + ", Acc " + str(acc)
+                tr_acc = self._sess.run(fetches=self._accuracy_node,
+                           feed_dict={self._input_placeholder: batch[0], self._label_placeholder: batch[1]})
+                print "Iteration " + str(i) + ", Acc " + str(acc) + " Training acc " + str(tr_acc)
                 saver.save(self._sess, self.checkpoint_prefix, meta_graph_suffix='pb')
 
     def accuracy(self, output_node, label_placeholder):
