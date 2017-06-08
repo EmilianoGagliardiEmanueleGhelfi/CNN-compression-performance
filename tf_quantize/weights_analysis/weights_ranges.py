@@ -17,12 +17,12 @@ def get_weights_from_pb(pb_file):
     with tf.gfile.GFile(pb_file, "rb") as f:
         graph_def = tf.GraphDef()
         graph_def.ParseFromString(f.read())
-        # get all the weights tensor as np.array
-        weights = [make_ndarray(node_def.attr['value'].tensor).tolist()
+        # get all the weights tensor as ndarray
+        weights = [make_ndarray(node_def.attr['value'].tensor)
                    for node_def in graph_def.node
                    if node_def.attr['value'].tensor.dtype is not 0 and 'Variable' in node_def.name]
         # flatten the elements in weights
-        weights = [sum(el, []) for el in weights]
+        weights = [sum(el.tolist(), []) for el in weights]
     print weights
     return [np.concatenate(ws, bs)
             for ws in [weights[i] for i in range(0, len(weights), 2)]
