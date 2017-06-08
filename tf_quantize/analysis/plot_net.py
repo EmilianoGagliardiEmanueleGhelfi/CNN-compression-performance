@@ -15,6 +15,8 @@ import numpy as np
 from matplotlib import mlab
 import os
 import math
+from os import listdir
+from os.path import isfile, join
 
 import weights_ranges
 
@@ -49,7 +51,7 @@ def plot(net_files):
     bar_chart(original_size, quantized_size, (net_list[i].name for i in range(0, len(net_list), 2)), "File Size",
               "Comparison of size", "img/size.png")
     # l1 d cache load misses
-    misses = [n.__dict__['L1-dcache-load-misses'] for n in net_list]
+    misses = [n.L1_dcache_load_misses for n in net_list]
     original_misses = [misses[i] for i in range(0, len(misses), 2)]
     quantized_misses = [misses[i] for i in range(1, len(misses), 2)]
     bar_chart(original_misses, quantized_misses, (net_list[i].name for i in range(0, len(net_list), 2)), "Misses",
@@ -60,6 +62,7 @@ def plot(net_files):
     quantized_time = [test_time[i] for i in range(1, len(test_time), 2)]
     bar_chart(original_time, quantized_time, (net_list[i].name for i in range(0, len(net_list), 2)), "Inference Time",
               "Comparison of Inference time", "img/test_time.png")
+    print test_time
 
     # plot weights
     net_list_weights = [net_list[i] for i in range(0,len(net_list),2)]
@@ -96,7 +99,7 @@ def bar_chart(original_data, quantized_data, xNames, yLabel, title,filename):
     plt.legend()
     plt.tight_layout()
     plt.savefig(filename)
-    #plt.show()
+    plt.show()
 
 
 def histogram(weights_list, filename, net_name):
@@ -115,5 +118,10 @@ def histogram(weights_list, filename, net_name):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=help)
     parser.add_argument('--net_file', type=str, nargs='+', help='files created by workflow program')
+    parser.add_argument('--dir',type=str,nargs=1,help='directory containing file')
     args = parser.parse_args()
-    plot(args.net_file)
+    if len(args.dir) == 0:
+        plot(args.net_file)
+    else:
+        files = [args.dir[0]+'/'+f for f in listdir(args.dir[0]) if isfile(join(args.dir[0], f))]
+        plot(files)
