@@ -17,7 +17,7 @@ import cifar10_processing
 import CNNs.CNN_utility as cnnu
 from pattern.pattern import ToBeQuantizedNetwork
 
-BATCH_SIZE = 128
+BATCH_SIZE = 50
 STEPS = 200000
 
 # Global constants describing the CIFAR-10 data set.
