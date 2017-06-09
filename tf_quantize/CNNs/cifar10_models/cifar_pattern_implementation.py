@@ -16,13 +16,18 @@ import os
 import cifar10_processing
 import CNNs.CNN_utility as cnnu
 from pattern.pattern import ToBeQuantizedNetwork
+import logging
 
-BATCH_SIZE = 50
+BATCH_SIZE = 128
 STEPS = 200000
 
 # Global constants describing the CIFAR-10 data set.
 IMAGE_SIZE = cifar10_processing.IMG_SIZE
 NUM_CLASSES = cifar10_processing.NUM_CLASSES
+
+# setup logging
+logging.basicConfig(filename='CNNs/cifar10_models/net_serialization/2conv_2fc/example.log', level=logging.DEBUG,
+                    format='%(asctime)s %(message)s')
 
 
 class Cifar10Network(ToBeQuantizedNetwork):
@@ -35,11 +40,11 @@ class Cifar10Network(ToBeQuantizedNetwork):
     net_name = "cifar10_net"
 
     # properties needed to export to pb in workflow. We put checkpoint data, meta graph
-    checkpoint_prefix = 'CNNS/cifar10_models/net_serialization/2conv_2fc/net'
-    checkpoint_path = 'CNNS/cifar10_models/net_serialization/2conv_2fc'
-    metagraph_path = 'CNNS/cifar10_models/net_serialization/2conv_2fc/metagraph.pb'
-    output_pb_path = 'CNNS/cifar10_models/net_serialization/2conv_2fc/output_graph.pb'
-    output_quantized_graph = 'CNNS/cifar10_models/net_serialization/2conv_2fc/quantized_graph.pb'
+    checkpoint_prefix = 'CNNs/cifar10_models/net_serialization/2conv_2fc/net'
+    checkpoint_path = 'CNNs/cifar10_models/net_serialization/2conv_2fc'
+    metagraph_path = 'CNNs/cifar10_models/net_serialization/2conv_2fc/metagraph.pb'
+    output_pb_path = 'CNNs/cifar10_models/net_serialization/2conv_2fc/output_graph.pb'
+    output_quantized_graph = 'CNNs/cifar10_models/net_serialization/2conv_2fc/quantized_graph.pb'
 
     def __init__(self):
         self._dataset = None
@@ -190,7 +195,9 @@ class Cifar10Network(ToBeQuantizedNetwork):
                                                 self._label_placeholder: self.test_data[1]})
                 tr_acc = self._sess.run(fetches=self._accuracy_node,
                            feed_dict={self._input_placeholder: batch[0], self._label_placeholder: batch[1]})
-                print "Iteration " + str(i) + ", Acc " + str(acc) + " Training acc " + str(tr_acc)
+                str_to_print =  "Iteration " + str(i) + ", Acc " + str(acc) + " Training acc " + str(tr_acc)
+                # log to file
+                logging.info(str_to_print)
                 saver.save(self._sess, self.checkpoint_prefix, meta_graph_suffix='pb')
 
     def accuracy(self, output_node, label_placeholder):
