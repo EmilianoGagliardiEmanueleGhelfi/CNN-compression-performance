@@ -16,6 +16,7 @@ import os
 import cifar10_processing
 import CNNs.CNN_utility as cnnu
 from pattern.pattern import ToBeQuantizedNetwork
+import logging
 
 BATCH_SIZE = 50
 STEPS = 200000
@@ -23,6 +24,10 @@ STEPS = 200000
 # Global constants describing the CIFAR-10 data set.
 IMAGE_SIZE = cifar10_processing.IMG_SIZE
 NUM_CLASSES = cifar10_processing.NUM_CLASSES
+
+# setup logging
+logging.basicConfig(filename='CNNs/cifar10_models/net_serialization/2conv_2fc/example.log', level=logging.DEBUG,
+                    format='%(asctime)s %(message)s')
 
 
 class Cifar10Network(ToBeQuantizedNetwork):
@@ -190,7 +195,9 @@ class Cifar10Network(ToBeQuantizedNetwork):
                                                 self._label_placeholder: self.test_data[1]})
                 tr_acc = self._sess.run(fetches=self._accuracy_node,
                            feed_dict={self._input_placeholder: batch[0], self._label_placeholder: batch[1]})
-                print "Iteration " + str(i) + ", Acc " + str(acc) + " Training acc " + str(tr_acc)
+                str_to_print =  "Iteration " + str(i) + ", Acc " + str(acc) + " Training acc " + str(tr_acc)
+                # log to file
+                logging.info(str_to_print)
                 saver.save(self._sess, self.checkpoint_prefix, meta_graph_suffix='pb')
 
     def accuracy(self, output_node, label_placeholder):
