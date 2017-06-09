@@ -74,15 +74,15 @@ class Mnist2Conv2Fc(ToBeQuantizedNetwork):
 
         return x, y_conv, y_
 
-    def _loss(self, labels, model_input):
+    def _loss(self, labels, model_output):
         """
         Adds to the inference graph the ops required to generate loss
         :param labels: the placeholder in the graph for the labels
-        :param model_input: the placeholder in the graph for the input
+        :param model_output: the placeholder in the graph for the input
         :return: the loss function node
         """
         # loss function
-        cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=labels, logits=model_input))
+        cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=labels, logits=model_output))
         return cross_entropy
 
     def _train(self, loss_node):

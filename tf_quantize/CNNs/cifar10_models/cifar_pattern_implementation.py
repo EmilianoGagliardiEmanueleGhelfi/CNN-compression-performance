@@ -17,37 +17,12 @@ import cifar10_processing
 import CNNs.CNN_utility as cnnu
 from pattern.pattern import ToBeQuantizedNetwork
 
-BATCH_SIZE = 100
-STEPS = 10000
+BATCH_SIZE = 128
+STEPS = 200000
 
 # Global constants describing the CIFAR-10 data set.
 IMAGE_SIZE = cifar10_processing.IMG_SIZE
 NUM_CLASSES = cifar10_processing.NUM_CLASSES
-
-
-def _add_loss_summaries(total_loss):
-    """Add summaries for losses in CIFAR-10 model.
-  Generates moving average for all losses and associated summaries for
-  visualizing the performance of the network.
-  Args:
-    total_loss: Total loss from loss().
-  Returns:
-    loss_averages_op: op for generating moving averages of losses.
-  """
-    # Compute the moving average of all individual losses and the total loss.
-    loss_averages = tf.train.ExponentialMovingAverage(0.9, name='avg')
-    losses = tf.get_collection('losses')
-    loss_averages_op = loss_averages.apply(losses + [total_loss])
-
-    # Attach a scalar summary to all individual losses and the total loss; do the
-    # same for the averaged version of the losses.
-    for l in losses + [total_loss]:
-        # Name each loss as '(raw)' and name the moving average version of the loss
-        # as the original loss name.
-        tf.summary.scalar(l.op.name + ' (raw)', l)
-        tf.summary.scalar(l.op.name, loss_averages.average(l))
-
-    return loss_averages_op
 
 
 class Cifar10Network(ToBeQuantizedNetwork):
@@ -180,6 +155,8 @@ class Cifar10Network(ToBeQuantizedNetwork):
         operation that obtains data and create the computation graph
         """
         cifar10_processing.maybe_download_and_extract()
+        if not os.path.exists(self.checkpoint_path):
+            os.mkdir(self.checkpoint_path)
         images, _, labels = cifar10_processing.load_training_data()
         # assign the test dataset that will be used by the workflow to test this and the quantized net
         test_images, _, test_labels = cifar10_processing.load_test_data()
@@ -207,7 +184,7 @@ class Cifar10Network(ToBeQuantizedNetwork):
             batch = self._dataset.next_batch(BATCH_SIZE)
             self._sess.run(fetches=self._train_step_node,
                            feed_dict={self._input_placeholder: batch[0], self._label_placeholder: batch[1]})
-            if i % 200 == 0:
+            if i % 500 == 0:
                 # run the accuracy node
                 acc = self._sess.run(fetches=self._accuracy_node,
                                      feed_dict={self._input_placeholder: self.test_data[0],
