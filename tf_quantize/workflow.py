@@ -1,5 +1,8 @@
 import argparse
 import subprocess, signal, platform, os
+
+import numpy
+
 from net_perf.net_performance import NetPerformance
 from datetime import datetime
 import tensorflow as tf
@@ -9,6 +12,9 @@ from distutils.util import strtobool
 import json
 
 from pattern.pattern import ToBeQuantizedNetwork
+
+# number of times the evaluation of cache and time performance is executed
+iterations = 500
 
 help = 'This script takes as input a cnn implemented using tensorflow. The network have to be defined like the in the' \
        'example file mnist_patter_implemementation.py, extending the ToBeQuantizedNetwork abstract class in ' \
@@ -109,28 +115,6 @@ def get_test_time(function_to_call, *args):
     return duration.total_seconds()
 
 
-def get_model_perf(function_to_call, net_name, test_data, *args):
-    """
-    Test the performance of the function to call in terms of cache and time
-    :param function_to_call: is a function that takes as input *args, is the function that evaluates the model and gets benchmarked
-    :param net_name: the name of the net
-    :param test_data: The tensor containing the test data, in order to get the avg forward time
-    :param args:  arguments needed from the function to call
-    :return: a NetPerformance object containing the performance of the net
-    """
-    # get cache performance
-    acc, perf_stdout = cache_perf_test(function_to_call, *args)
-    net_perf = NetPerformance(net_name,float(acc), perf_stdout)
-    # get test time
-    # get test size, test_data is not a tensor, convert it with convert_to_tensor and get its shapes
-    # shape[0] is the number of items, shape[1] is product of number of pixel I think
-    test_data_size = tf.convert_to_tensor(test_data).get_shape()[0].value
-    # convert time returned by get test time into time for each item, in this way we get the average time
-    net_perf.test_time = get_test_time(function_to_call, *args) / test_data_size
-    print net_perf
-    return net_perf
-
-
 def evaluate(output_node, test_data, labels, input_placeholder_node, label_placeholder_node, graph):
     """
     Takes a graph as input, attaches an accuracy node and evaluates it. Notice that the tensor must be created
@@ -191,6 +175,47 @@ def restore(meta_graph_path, model):
         return output_node, input_placeholder, label_placeholder, graph
 
 
+def perf_stderr2dict(perf_output):
+    """
+    :param perf_output: the std error file of perf
+    :return: a dictionary containing all the information in the stderr of perf
+    """
+    perf_dict = {}
+    perf_output_list = perf_output.split("\n")
+    for line in perf_output_list:
+        # the last line is empty
+        if line != "":
+            values = line.split(",")
+            attr_value = values[0]
+            attr_name = values[2].replace('-', '_')
+            perf_dict[attr_name] = attr_value
+    return perf_dict
+
+
+def perf_mean_std(perf_dict_list):
+    """
+    assumed a list af all dictionary of the same form computes the mean and variance between all the values of the
+    same key
+    :param perf_dict_list:
+    :return: a dictionary containing attr_mean = value attr_var = value for each key value in the dictionary
+    """
+    result = {}
+    # intialization
+    for key in perf_dict_list[0]:
+        result[key + '_mean'] = []
+        result[key + '_var'] = []
+    # in each key the list af all values
+    for key in perf_dict_list[0]:
+        for dic in perf_dict_list:
+            result[key + '_mean'].append(dic[key])
+            result[key + '_var'].append(dic[key])
+    # variance and mean for each key
+    for key in perf_dict_list[0]:
+        result[key + '_mean'] = numpy.mean(result[key + '_mean'])
+        result[key + '_var'] = numpy.var(result[key + '_var'])
+    return result
+
+
 def main(model, to_train, to_quantize, to_evaluate):
     model.prepare()
     if to_train:
@@ -203,24 +228,34 @@ def main(model, to_train, to_quantize, to_evaluate):
         quantize(model)
     # restore the real model
     if to_evaluate:
-        output_node, input_placeholder, label_placeholder, graph = restore(model.output_pb_path, model)
-        # get performance of the model
-        original_net_perf = get_model_perf(evaluate, model.net_name, model.test_data[0], output_node,
-                                           model.test_data[0], model.test_data[1], input_placeholder,
-                                           label_placeholder, graph)
-        original_net_perf.quantized = False
-        original_net_perf.path = model.output_pb_path
-        original_net_perf.size = os.path.getsize(model.output_pb_path)
-        # the same with the quantized model
-        output_node, input_placeholder, label_placeholder, graph = restore(model.output_quantized_graph, model)
-        quantized_net_perf = get_model_perf(evaluate, model.net_name+'_quant', model.test_data[0], output_node,
-                                            model.test_data[0], model.test_data[1], input_placeholder,
-                                            label_placeholder, graph)
-        quantized_net_perf.quantized = True
-        # set the size of the pb
-        quantized_net_perf.size = os.path.getsize(model.output_quantized_graph)
-        # set the path of the pb
-        quantized_net_perf.path = model.output_quantized_graph
+        # get the networks from pb
+        o_output_node, o_input_placeholder, o_label_placeholder, o_graph = restore(model.output_pb_path, model)
+        q_output_node, q_input_placeholder, q_label_placeholder, q_graph = restore(model.output_quantized_graph, model)
+        # creates the two net_performance object
+        original_net_perf = NetPerformance(net_name=model.net_name, quantized=False, path=model.model.output_pb_path,
+                                           size=os.path.getsize(model.output_pb_path))
+        quantized_net_perf = NetPerformance(net_name=model.net_name + '_quant', quantized=True,
+                                            path=model.output_quantized_graph,
+                                            size=os.path.getsize(model.output_quantized_graph))
+        # iterates many time obtaining the parameters of the model, and average
+        o_dict_list = []
+        q_dict_list = []
+        for i in range(iterations):
+            o_acc, o_perf_std_err = cache_perf_test(evaluate, o_output_node, model.test_data[0], model.test_data[1],
+                                                    o_input_placeholder, o_label_placeholder, o_graph)
+            q_acc, q_perf_std_err = cache_perf_test(evaluate, q_output_node, model.test_data[0], model.test_data[1],
+                                                    q_input_placeholder, q_label_placeholder, q_graph)
+            o_dict_list.append(perf_stderr2dict(o_perf_std_err))
+            q_dict_list.append(perf_stderr2dict(q_perf_std_err))
+
+        # now need to compute mean and variance for all the parameters in the dictionary list, and insert in net perf
+        original_net_perf.add_test_information(perf_mean_std(o_dict_list))
+        quantized_net_perf.add_test_information(perf_mean_std(q_dict_list))
+
+        # add the accuracy
+        original_net_perf.accuracy = o_acc
+        quantized_net_perf.accuracy = q_acc
+
         # print on a file the networks
         f = open(model.checkpoint_prefix + '_' + model.net_name + '_performance', 'w')
         json.dump([original_net_perf.__dict__, quantized_net_perf.__dict__], f, indent=4)

@@ -3,40 +3,18 @@ takes the output of perf and setup the attribute of the object net_object
 """
 import json
 
-def setup_net(perf_output, net_object):
-    perf_output_list = perf_output.split("\n")
-    for line in perf_output_list:
-        # the last line is empty
-        if line != "":
-            values = line.split(",")
-            attr_value = values[0]
-            attr_name = values[2].replace('-', '_')
-            setattr(net_object, attr_name, attr_value)
-
 
 class NetPerformance:
-    name = None
-    accuracy = None
-    # test time in sec for each image
-    test_time = None
-    # dimension of the pb
-    size = None
-    # True if the net have been obtained bu a quantization
-    quantized = None
-    # path to the pb
-    path = None
-
-    def __init__(self, net_name =None, accuracy= None, perf_output= None, json_dict = None):
+    def __init__(self, net_name=None, json_dict=None, quantized=None, size=None, path=None):
         """
         :param net_name is the name of the net
-        :param accuracy is the accuracy of the net in testing
-        :param perf_output is the string output of perf_tool, to be parsed
-        :param json_string in the string representing this object
+        :param json_dict in the string representing this object
         """
         if json_dict is None:
             self.name = net_name
-            self.accuracy = accuracy
-            setup_net(perf_output, self)
+            self.size = size
+            self.quantized = quantized
+            self.path = path
         else:
             self.__dict__ = json_dict
 
@@ -50,3 +28,13 @@ class NetPerformance:
         f = open(output_file, 'w')
         f.write(self.__str__())
         f.close()
+
+    def add_test_information(self, perf_dict):
+        """
+        Add to self all the attribute with their value contained in dict
+        :param perf_dict: the dictionary containing all the information obtained by linux perf, and the accuracy of the model  
+        """
+        for key in perf_dict.keys():
+            setattr(self, key, perf_dict[key])
+
+
