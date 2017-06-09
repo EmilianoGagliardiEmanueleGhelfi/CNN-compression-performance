@@ -245,8 +245,19 @@ def main(model, to_train, to_quantize, to_evaluate):
                                                     o_input_placeholder, o_label_placeholder, o_graph)
             q_acc, q_perf_std_err = cache_perf_test(evaluate, q_output_node, model.test_data[0], model.test_data[1],
                                                     q_input_placeholder, q_label_placeholder, q_graph)
-            o_dict_list.append(perf_stderr2dict(o_perf_std_err))
-            q_dict_list.append(perf_stderr2dict(q_perf_std_err))
+            o_current_dict = perf_stderr2dict(o_perf_std_err)
+            q_current_dict = perf_stderr2dict(q_perf_std_err)
+            # get test time
+            # get test size, test_data is not a tensor, convert it with convert_to_tensor and get its shapes
+            # shape[0] is the number of items, shape[1] is product of number of pixel I think
+            test_data_size = tf.convert_to_tensor(model.test_data[0]).get_shape()[0].value
+            o_current_dict['test_time'] = get_test_time(evaluate, o_output_node, model.test_data[0], model.test_data[1],
+                                                        o_input_placeholder, o_label_placeholder, o_graph)/test_data_size
+
+            q_current_dict['test_time'] = get_test_time(evaluate, q_output_node, model.test_data[0], model.test_data[1],
+                                                        q_input_placeholder, q_label_placeholder, q_graph)/test_data_size
+            o_dict_list.append(o_current_dict)
+            q_dict_list.append(q_current_dict)
 
         # now need to compute mean and variance for all the parameters in the dictionary list, and insert in net perf
         original_net_perf.add_test_information(perf_mean_std(o_dict_list))

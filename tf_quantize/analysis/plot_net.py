@@ -51,13 +51,13 @@ def plot(net_files):
     bar_chart(original_size, quantized_size, (net_list[i].name for i in range(0, len(net_list), 2)), "File Size",
               "Comparison of size", "img/size.png")
     # l1 d cache load misses
-    misses = [n.L1_dcache_load_misses for n in net_list]
+    misses = [n.L1_dcache_load_misses_mean for n in net_list]
     original_misses = [misses[i] for i in range(0, len(misses), 2)]
     quantized_misses = [misses[i] for i in range(1, len(misses), 2)]
     bar_chart(original_misses, quantized_misses, (net_list[i].name for i in range(0, len(net_list), 2)), "Misses",
               "Comparison of l1 dcache load misses", "img/misses.png")
     # test time
-    test_time = [n.test_time for n in net_list]
+    test_time = [n.test_time_mean for n in net_list]
     original_time = [test_time[i] for i in range(0, len(test_time), 2)]
     quantized_time = [test_time[i] for i in range(1, len(test_time), 2)]
     bar_chart(original_time, quantized_time, (net_list[i].name for i in range(0, len(net_list), 2)), "Inference Time",
@@ -71,7 +71,7 @@ def plot(net_files):
         histogram(weights, 'img/weights'+net.name+'.png', net.name)
 
 
-def bar_chart(original_data, quantized_data, xNames, yLabel, title,filename):
+def bar_chart(original_data, quantized_data, xNames, yLabel, title, filename):
     """
     :param original_data: original data to plot
     :param quantized_data: quantized data to plot
