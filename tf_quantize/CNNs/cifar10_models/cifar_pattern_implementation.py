@@ -51,6 +51,7 @@ class Cifar10Network(ToBeQuantizedNetwork):
         self._sess = tf.Session()
         self._accuracy_node = None
         self._loss_node = None
+        self.serialization_path = 'CNNS/cifar10_models/net_serialization'
 
     def _loss(self, logits, labels):
         """Add L2Loss to all the trainable variables.
@@ -156,6 +157,7 @@ class Cifar10Network(ToBeQuantizedNetwork):
         """
         cifar10_processing.maybe_download_and_extract()
         if not os.path.exists(self.checkpoint_path):
+            os.mkdir(self.serialization_path)
             os.mkdir(self.checkpoint_path)
         images, _, labels = cifar10_processing.load_training_data()
         # assign the test dataset that will be used by the workflow to test this and the quantized net
