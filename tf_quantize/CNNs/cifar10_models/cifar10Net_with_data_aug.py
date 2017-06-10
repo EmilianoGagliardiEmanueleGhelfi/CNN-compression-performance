@@ -227,11 +227,10 @@ class Cifar10NetworkWithDataAug(ToBeQuantizedNetwork):
         self.test_data = (test_images, test_labels)
         self._train_input_placeholder, self._output_training_node, _ = self._inference(training=True)
         self._input_placeholder, self._output_placeholder, self._label_placeholder = self._inference(training=False)
-        # create a gloabl step
+        # create a global step
         # First create a TensorFlow variable that keeps track of the number of optimization iterations performed so far.
         # we want to save this variable with all the other TensorFlow variables in the checkpoints.
         # Note that trainable=False which means that TensorFlow will not try to optimize this variable.
-
         global_step = tf.Variable(initial_value=0,
                                   name='global_step', trainable=False)
         self._loss_node = self._loss(self._output_training_node, self._label_placeholder)
