@@ -1,34 +1,28 @@
 """Builds the CIFAR-10 network.
-Summary of available functions:
- # Compute inference on the model inputs to make a prediction.
- predictions = inference(inputs)
- # Compute the total loss of the prediction with respect to the labels.
- loss = loss(predictions, labels)
- # Create a graph to run one step of training with respect to the loss.
- train_op = train(loss, global_step)
+Creates two graph, one for training with image preprocessing and data augmentation
+one for inference without image preprocessing, only resize.
+Learning rate should be very small in order to avoid oscillations
+From 32*32 size of cifar database to 24*24 in order to reduce useless part of the image
 """
-import pprint
 
 import tensorflow as tf
-from tensorflow.contrib.learn.python.learn.datasets.mnist import DataSet
 import os
-from tensorflow.python.tools import strip_unused_lib
-from tensorflow.python.framework import dtypes
-
 import cifar10_processing
 import CNNs.CNN_utility as cnnu
 from pattern.pattern import ToBeQuantizedNetwork
 import logging
-from matplotlib import pyplot as plt
 import numpy as np
 
+# 64 is not too big, too big dataset are dangerous for memory requirements
 BATCH_SIZE = 64
-STEPS = 200000
+# magic number for total iteration steps
+STEPS = 10000
 
 # Global constants describing the CIFAR-10 data set.
 IMAGE_SIZE = cifar10_processing.IMG_SIZE
 NUM_CLASSES = cifar10_processing.NUM_CLASSES
 
+# use 24 as image size since we do not want too big images
 img_size_cropped = 24
 
 # setup logging
@@ -69,99 +63,52 @@ class Cifar10NetworkWithDataAug(ToBeQuantizedNetwork):
         self._global_step = None
         self._train_input_placeholder = None
 
-    def plot_images(self, images, cls_true, cls_pred=None, smooth=True, class_names=None):
-
-        assert len(images) == len(cls_true) == 9
-
-        # Create figure with sub-plots.
-        fig, axes = plt.subplots(3, 3)
-
-        # Adjust vertical spacing if we need to print ensemble and best-net.
-        if cls_pred is None:
-            hspace = 0.3
-        else:
-            hspace = 0.6
-        fig.subplots_adjust(hspace=hspace, wspace=0.3)
-
-        for i, ax in enumerate(axes.flat):
-            # Interpolation type.
-            if smooth:
-                interpolation = 'spline16'
-            else:
-                interpolation = 'nearest'
-
-            # Plot image.
-            ax.imshow(images[i, :, :, :],
-                      interpolation=interpolation)
-
-            # Name of the true class.
-            cls_true_name = class_names[cls_true[i]]
-
-            # Show true and predicted classes.
-            if cls_pred is None:
-                xlabel = "True: {0}".format(cls_true_name)
-            else:
-                # Name of the predicted class.
-                cls_pred_name = class_names[cls_pred[i]]
-
-                xlabel = "True: {0}\nPred: {1}".format(cls_true_name, cls_pred_name)
-
-            # Show the classes as the label on the x-axis.
-            ax.set_xlabel(xlabel)
-
-            # Remove ticks from the plot.
-            ax.set_xticks([])
-            ax.set_yticks([])
-
-        # Ensure the plot is shown correctly with multiple plots
-        # in a single Notebook cell.
-        plt.show()
-
-
-    def pre_process_image(self, image, training):
+    def pre_process_image(self, image):
         # This function takes a single image as input,
-        # and a boolean whether to build the training or testing graph.
-        # Used for data augmentation
+        # Used for data augmentation, random crop and other random manipulations
+        # Randomly crop the input image.
+        image = tf.random_crop(image, size=[img_size_cropped, img_size_cropped, 3])
 
-        if training:
-            # For training, add the following to the TensorFlow graph.
-            # Randomly crop the input image.
-            image = tf.random_crop(image, size=[img_size_cropped, img_size_cropped, 3])
+        # Randomly flip the image horizontally.
+        image = tf.image.random_flip_left_right(image)
 
-            # Randomly flip the image horizontally.
-            image = tf.image.random_flip_left_right(image)
+        # Randomly adjust hue, contrast and saturation.
+        image = tf.image.random_hue(image, max_delta=0.05)
+        image = tf.image.random_contrast(image, lower=0.3, upper=1.0)
+        image = tf.image.random_brightness(image, max_delta=0.2)
+        image = tf.image.random_saturation(image, lower=0.0, upper=2.0)
 
-            # Randomly adjust hue, contrast and saturation.
-            image = tf.image.random_hue(image, max_delta=0.05)
-            image = tf.image.random_contrast(image, lower=0.3, upper=1.0)
-            image = tf.image.random_brightness(image, max_delta=0.2)
-            image = tf.image.random_saturation(image, lower=0.0, upper=2.0)
+        # Some of these functions may overflow and result in pixel
+        # values beyond the [0, 1] range. It is unclear from the
+        # documentation of TensorFlow 0.10.0rc0 whether this is
+        # intended. A simple solution is to limit the range.
 
-            # Some of these functions may overflow and result in pixel
-            # values beyond the [0, 1] range. It is unclear from the
-            # documentation of TensorFlow 0.10.0rc0 whether this is
-            # intended. A simple solution is to limit the range.
-
-            # Limit the image pixels between [0, 1] in case of overflow.
-            image = tf.minimum(image, 1.0)
-            image = tf.maximum(image, 0.0)
-        else:
-            # For training, add the following to the TensorFlow graph.
-
-            # Crop the input image around the centre so it is the same
-            # size as images that are randomly cropped during training.
-            image = tf.image.resize_image_with_crop_or_pad(image,
-                                                           target_height=img_size_cropped,
-                                                           target_width=img_size_cropped)
+        # Limit the image pixels between [0, 1] in case of overflow.
+        image = tf.minimum(image, 1.0)
+        image = tf.maximum(image, 0.0)
+        # For training, add the following to the TensorFlow graph.
 
         return image
 
     def pre_process(self, images, training):
+        """
+        :param images: tensor placeholder of the input of the graph
+        :param training: boolean, True for training, False for inference
+        :return: the images preprocessed as tensor
+        """
         # Use TensorFlow to loop over all the input images and call
         # the function above which takes a single image as input.
+        # notice that freeze is not good with tf iterations so for the inference graph we do not want to iterate
         if training:
             images.set_shape([BATCH_SIZE, IMAGE_SIZE, IMAGE_SIZE, 3])
-        images = tf.map_fn(lambda image: self.pre_process_image(image, training), images)
+            images = tf.map_fn(lambda image: self.pre_process_image(image), images)
+        else:
+            # only resize image for inference graph
+            # Crop the input image around the centre so it is the same
+            # size as images that are randomly cropped during training.
+            images = tf.image.resize_image_with_crop_or_pad(images,
+                                                            target_height=img_size_cropped,
+                                                            target_width=img_size_cropped)
 
         return images
 
@@ -183,7 +130,7 @@ class Cifar10NetworkWithDataAug(ToBeQuantizedNetwork):
 
     def _train(self, total_loss, global_step=None):
         """Train CIFAR-10 model.
-        Create an optimizer and apply to all trainable variables.
+        Create an optimizer and apply to all trainable variables. The learning rate should be very small!!!
         Args:
           total_loss: Total loss from loss().
         Returns:
@@ -198,11 +145,10 @@ class Cifar10NetworkWithDataAug(ToBeQuantizedNetwork):
         Returns:
           Logits.
         """
-        # We instantiate all variables using tf.get_variable() instead of
-        # tf.Variable() in order to share variables across multiple GPU training runs.
-        # If we only ran this model on a single GPU, we could simplify this function
-        # by replacing all instances of tf.get_variable() with tf.Variable().
-        #
+        # We instantiate all variables using tf.get_variable() so they can be shared between train and
+        # inference graph. using get_variable it does not create another variable is there's already a variable
+        # with the same name.
+
         if not training:
             x = tf.placeholder(tf.float32, shape=[None, IMAGE_SIZE, IMAGE_SIZE, 3], name=self.input_placeholder_name)
             y_ = tf.placeholder(tf.float32, shape=[None, 10], name=self.label_placeholder_name)
@@ -210,6 +156,7 @@ class Cifar10NetworkWithDataAug(ToBeQuantizedNetwork):
             x = tf.placeholder(tf.float32, shape=[None, IMAGE_SIZE, IMAGE_SIZE, 3], name=self.input_placeholder_name+'_train')
             y_ = tf.placeholder(tf.float32, shape=[None, 10], name=self.label_placeholder_name)
 
+        # reuse variable only for inference
         with tf.variable_scope('network', reuse=not training):
             img = x
             # do preprocessing if needed
@@ -226,21 +173,21 @@ class Cifar10NetworkWithDataAug(ToBeQuantizedNetwork):
             pool1 = tf.nn.max_pool(relu1, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1],
                                    padding='SAME', name='pool1')
             # norm1
-            # norm1 = tf.nn.lrn(pool1, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75,
-            #                 name='norm1')
+            norm1 = tf.nn.lrn(pool1, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75,
+                             name='norm1')
 
             # conv2
             kernel2 = cnnu.weight_variable([5, 5, 64, 64], name='kernel2')
-            conv2 = tf.nn.conv2d(pool1, kernel2, [1, 1, 1, 1], padding='SAME')
+            conv2 = tf.nn.conv2d(norm1, kernel2, [1, 1, 1, 1], padding='SAME')
             biases2 = cnnu.bias_variable([64], name='bias2')
             pre_activation2 = tf.nn.bias_add(conv2, biases2)
             relu2 = tf.nn.relu(pre_activation2)
 
             # norm2
-            # norm2 = tf.nn.lrn(relu2, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75,
-            #                  name='norm2')
+            norm2 = tf.nn.lrn(relu2, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75,
+                              name='norm2')
             # pool2
-            pool2 = tf.nn.max_pool(relu2, ksize=[1, 2, 2, 1],
+            pool2 = tf.nn.max_pool(norm2, ksize=[1, 2, 2, 1],
                                    strides=[1, 2, 2, 1], padding='SAME', name='pool2')
 
             # local3
@@ -263,7 +210,7 @@ class Cifar10NetworkWithDataAug(ToBeQuantizedNetwork):
             biases_final = cnnu.bias_variable([NUM_CLASSES], name='final_fc_bias')
             # get only the last part of the output node since it contains also the scope
             softmax_linear = tf.add(tf.matmul(local4, weights_final), biases_final,
-                                    name=self.output_node_name.split('/')[1])
+                                        name=self.output_node_name.split('/')[1])
 
             return x, softmax_linear, y_
 
@@ -337,6 +284,10 @@ class Cifar10NetworkWithDataAug(ToBeQuantizedNetwork):
         self._save()
 
     def _random_batch(self):
+        """
+        returns a random batch from training set
+        :return:
+        """
         # Number of images in the training-set.
         num_images = len(self._train_img)
 
@@ -369,11 +320,5 @@ class Cifar10NetworkWithDataAug(ToBeQuantizedNetwork):
         # export the metagraph, first need to obtain the file name of the meta graph from the total path defined as
         # property
         metagraph_filename = self.metagraph_path.split('/')[len(self.metagraph_path.split('/')) - 1]
-        # extract the subgraph
-        # graph_to_save = tf.graph_util.extract_sub_graph(self._sess.graph.as_graph_def(),'network/'+self.output_node_name)
-        graph_to_save = strip_unused_lib.strip_unused(self._sess.graph.as_graph_def(), [self.input_placeholder_name,
-                                                                                        self.label_placeholder_name],
-                                                      [self.output_node_name],
-                                      dtypes.float32.as_datatype_enum)
-        tf.train.write_graph(graph_to_save, self.checkpoint_path, metagraph_filename)
+        tf.train.write_graph(self._sess.graph.as_graph_def(), self.checkpoint_path, metagraph_filename)
 

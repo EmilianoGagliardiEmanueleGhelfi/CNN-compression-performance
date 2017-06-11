@@ -3,7 +3,6 @@
 # Functions for downloading the CIFAR-10 data-set from the internet
 # and loading it into memory.
 #
-# Implemented in Python 3.5
 #
 # Usage:
 # 1) Set the variable data_path with the desired storage path.
@@ -21,22 +20,12 @@
 # where the individual pixels are floats between 0.0 and 1.0.
 #
 ########################################################################
-#
-# This file is part of the TensorFlow Tutorials available at:
-#
-# https://github.com/Hvass-Labs/TensorFlow-Tutorials
-#
-# Published under the MIT License. See the file LICENSE for details.
-#
-# Copyright 2016 by Magnus Erik Hvass Pedersen
-#
-########################################################################
+
 
 import numpy as np
 import pickle
 import os
 from dataset import one_hot_encoded
-import re
 import sys
 import tarfile
 from six.moves import urllib

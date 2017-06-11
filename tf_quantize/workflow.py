@@ -232,7 +232,7 @@ def main(model, to_train, to_quantize, to_evaluate):
         o_output_node, o_input_placeholder, o_label_placeholder, o_graph = restore(model.output_pb_path, model)
         q_output_node, q_input_placeholder, q_label_placeholder, q_graph = restore(model.output_quantized_graph, model)
         # creates the two net_performance object
-        original_net_perf = NetPerformance(net_name=model.net_name, quantized=False, path=model.model.output_pb_path,
+        original_net_perf = NetPerformance(net_name=model.net_name, quantized=False, path=model.output_pb_path,
                                            size=os.path.getsize(model.output_pb_path))
         quantized_net_perf = NetPerformance(net_name=model.net_name + '_quant', quantized=True,
                                             path=model.output_quantized_graph,
