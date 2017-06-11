@@ -12,14 +12,17 @@ import pprint
 import tensorflow as tf
 from tensorflow.contrib.learn.python.learn.datasets.mnist import DataSet
 import os
+from tensorflow.python.tools import strip_unused_lib
+from tensorflow.python.framework import dtypes
 
 import cifar10_processing
 import CNNs.CNN_utility as cnnu
 from pattern.pattern import ToBeQuantizedNetwork
 import logging
+from matplotlib import pyplot as plt
 
 BATCH_SIZE = 64
-STEPS = 200000
+STEPS = 10000
 
 # Global constants describing the CIFAR-10 data set.
 IMAGE_SIZE = cifar10_processing.IMG_SIZE
@@ -38,7 +41,7 @@ class Cifar10NetworkWithDataAug(ToBeQuantizedNetwork):
     test_data = []  # initialized in prepare, tuple with input, labels
     input_placeholder_name = 'input'
     label_placeholder_name = 'label'
-    output_node_name = 'network/output'
+    output_node_name = 'network_1/output'
     net_name = "cifar10_net"
 
     # properties needed to export to pb in workflow. We put checkpoint data, meta graph
@@ -63,6 +66,55 @@ class Cifar10NetworkWithDataAug(ToBeQuantizedNetwork):
         self._output_training_node = None
         self._global_step = None
         self._train_input_placeholder = None
+
+    def plot_images(self, images, cls_true, cls_pred=None, smooth=True, class_names=None):
+
+        assert len(images) == len(cls_true) == 9
+
+        # Create figure with sub-plots.
+        fig, axes = plt.subplots(3, 3)
+
+        # Adjust vertical spacing if we need to print ensemble and best-net.
+        if cls_pred is None:
+            hspace = 0.3
+        else:
+            hspace = 0.6
+        fig.subplots_adjust(hspace=hspace, wspace=0.3)
+
+        for i, ax in enumerate(axes.flat):
+            # Interpolation type.
+            if smooth:
+                interpolation = 'spline16'
+            else:
+                interpolation = 'nearest'
+
+            # Plot image.
+            ax.imshow(images[i, :, :, :],
+                      interpolation=interpolation)
+
+            # Name of the true class.
+            cls_true_name = class_names[cls_true[i]]
+
+            # Show true and predicted classes.
+            if cls_pred is None:
+                xlabel = "True: {0}".format(cls_true_name)
+            else:
+                # Name of the predicted class.
+                cls_pred_name = class_names[cls_pred[i]]
+
+                xlabel = "True: {0}\nPred: {1}".format(cls_true_name, cls_pred_name)
+
+            # Show the classes as the label on the x-axis.
+            ax.set_xlabel(xlabel)
+
+            # Remove ticks from the plot.
+            ax.set_xticks([])
+            ax.set_yticks([])
+
+        # Ensure the plot is shown correctly with multiple plots
+        # in a single Notebook cell.
+        plt.show()
+
 
     def pre_process_image(self, image, training):
         # This function takes a single image as input,
@@ -106,7 +158,7 @@ class Cifar10NetworkWithDataAug(ToBeQuantizedNetwork):
         # Use TensorFlow to loop over all the input images and call
         # the function above which takes a single image as input.
         if training:
-            images.set_shape([BATCH_SIZE,IMAGE_SIZE,IMAGE_SIZE,3])
+            images.set_shape([BATCH_SIZE, IMAGE_SIZE, IMAGE_SIZE, 3])
         images = tf.map_fn(lambda image: self.pre_process_image(image, training), images)
 
         return images
@@ -135,7 +187,7 @@ class Cifar10NetworkWithDataAug(ToBeQuantizedNetwork):
         Returns:
           train_op: op for training.
         """
-        train_step = tf.train.AdamOptimizer(1e-4).minimize(total_loss, global_step=global_step)
+        train_step = tf.train.AdamOptimizer(1e-3).minimize(total_loss, global_step=global_step)
 
         return train_step
 
@@ -149,8 +201,12 @@ class Cifar10NetworkWithDataAug(ToBeQuantizedNetwork):
         # If we only ran this model on a single GPU, we could simplify this function
         # by replacing all instances of tf.get_variable() with tf.Variable().
         #
-        x = tf.placeholder(tf.float32, shape=[None, IMAGE_SIZE, IMAGE_SIZE, 3], name=self.input_placeholder_name)
-        y_ = tf.placeholder(tf.float32, shape=[None, 10], name=self.label_placeholder_name)
+        if not training:
+            x = tf.placeholder(tf.float32, shape=[None, IMAGE_SIZE, IMAGE_SIZE, 3], name=self.input_placeholder_name)
+            y_ = tf.placeholder(tf.float32, shape=[None, 10], name=self.label_placeholder_name)
+        else:
+            x = tf.placeholder(tf.float32, shape=[None, IMAGE_SIZE, IMAGE_SIZE, 3], name=self.input_placeholder_name+'_train')
+            y_ = tf.placeholder(tf.float32, shape=[None, 10], name=self.label_placeholder_name)
 
         with tf.variable_scope('network', reuse=not training):
             img = x
@@ -168,33 +224,32 @@ class Cifar10NetworkWithDataAug(ToBeQuantizedNetwork):
             pool1 = tf.nn.max_pool(relu1, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1],
                                    padding='SAME', name='pool1')
             # norm1
-            norm1 = tf.nn.lrn(pool1, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75,
-                              name='norm1')
+            # norm1 = tf.nn.lrn(pool1, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75,
+            #                 name='norm1')
 
             # conv2
             kernel2 = cnnu.weight_variable([5, 5, 64, 64], name='kernel2')
-            conv2 = tf.nn.conv2d(norm1, kernel2, [1, 1, 1, 1], padding='SAME')
+            conv2 = tf.nn.conv2d(pool1, kernel2, [1, 1, 1, 1], padding='SAME')
             biases2 = cnnu.bias_variable([64], name='bias2')
             pre_activation2 = tf.nn.bias_add(conv2, biases2)
             relu2 = tf.nn.relu(pre_activation2)
 
             # norm2
-            norm2 = tf.nn.lrn(relu2, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75,
-                              name='norm2')
+            # norm2 = tf.nn.lrn(relu2, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75,
+            #                  name='norm2')
             # pool2
-            pool2 = tf.nn.max_pool(norm2, ksize=[1, 2, 2, 1],
+            pool2 = tf.nn.max_pool(relu2, ksize=[1, 2, 2, 1],
                                    strides=[1, 2, 2, 1], padding='SAME', name='pool2')
 
             # local3
             # Move everything into depth so we can perform a single matrix multiply.
             reshape = tf.reshape(pool2, [-1, 6 * 6 * 64])
-            weights_1 = cnnu.weight_variable([6 * 6 * 64, 384], name='local_weights_3')
-
-            biases_1 = cnnu.bias_variable([384], name='local_bias_3')
+            weights_1 = cnnu.weight_variable([6 * 6 * 64, 256], name='local_weights_3')
+            biases_1 = cnnu.bias_variable([256], name='local_bias_3')
             local3 = tf.nn.relu(tf.matmul(reshape, weights_1) + biases_1, name='local3')
 
             # local4
-            weights_2 = cnnu.weight_variable([384, 192], name='local_weights_4')
+            weights_2 = cnnu.weight_variable([256, 192], name='local_weights_4')
             biases_2 = cnnu.bias_variable([192], name='local_bias4')
             local4 = tf.nn.relu(tf.matmul(local3, weights_2) + biases_2, name='local4')
 
@@ -221,7 +276,7 @@ class Cifar10NetworkWithDataAug(ToBeQuantizedNetwork):
         cifar10_processing.maybe_download_and_extract()
         images, _, labels = cifar10_processing.load_training_data()
         # assign the test dataset that will be used by the workflow to test this and the quantized net
-        test_images, _, test_labels = cifar10_processing.load_test_data()
+        test_images, test_cls, test_labels = cifar10_processing.load_test_data()
         # create an instance of dataset class
         self._dataset = DataSet(images, labels, one_hot=True, reshape=False)
         self.test_data = (test_images, test_labels)
@@ -234,7 +289,7 @@ class Cifar10NetworkWithDataAug(ToBeQuantizedNetwork):
         global_step = tf.Variable(initial_value=0,
                                   name='global_step', trainable=False)
         self._loss_node = self._loss(self._output_training_node, self._label_placeholder)
-        self._accuracy_node = self.accuracy(self._output_placeholder, self._label_placeholder)
+        self._accuracy_node = self._accuracy(self._output_placeholder, self._label_placeholder)
         self._train_step_node = self._train(self._loss_node, global_step=global_step)
 
     def train(self):
@@ -267,30 +322,27 @@ class Cifar10NetworkWithDataAug(ToBeQuantizedNetwork):
         # training iterations
         for i in range(STEPS + 1):
             batch = self._dataset.next_batch(BATCH_SIZE)
-            self._sess.run(fetches=self._train_step_node,
+            self._sess.run(self._train_step_node,
                            feed_dict={self._train_input_placeholder: batch[0], self._label_placeholder: batch[1]})
             if i % 500 == 0:
                 # run the accuracy node
-                acc = self._sess.run(fetches=self._accuracy_node,
+                acc = self._sess.run(self._accuracy_node,
                                      feed_dict={self._input_placeholder: self.test_data[0],
                                                 self._label_placeholder: self.test_data[1]})
-                tr_acc = self._sess.run(fetches=self._accuracy_node,
-                                        feed_dict={self._input_placeholder: batch[0],
-                                                   self._label_placeholder: batch[1]})
-                str_to_print = "Iteration " + str(i) + ", Acc " + str(acc) + " Training acc " + str(tr_acc)
+                str_to_print = "Iteration " + str(i) + ", Acc " + str(acc)
                 # log to file
                 logging.info(str_to_print)
                 saver.save(self._sess, self.checkpoint_prefix, meta_graph_suffix='pb')
         self._save()
 
-    def accuracy(self, output_node, label_placeholder):
+    def _accuracy(self, output_node, label_placeholder):
         """
         Get the output node and attach to it the accuracy node
         :param output_node: the output of the net
         :param label_placeholder:
         :return: the accuracy node
         """
-        correct_prediction = tf.equal(tf.argmax(output_node, 1), tf.argmax(label_placeholder, 1))
+        correct_prediction = tf.equal(tf.argmax(output_node, dimension=1), tf.argmax(label_placeholder, dimension=1))
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
         return accuracy
 
@@ -301,4 +353,11 @@ class Cifar10NetworkWithDataAug(ToBeQuantizedNetwork):
         # export the metagraph, first need to obtain the file name of the meta graph from the total path defined as
         # property
         metagraph_filename = self.metagraph_path.split('/')[len(self.metagraph_path.split('/')) - 1]
-        tf.train.write_graph(self._sess.graph.as_graph_def(), self.checkpoint_path, metagraph_filename)
+        # extract the subgraph
+        # graph_to_save = tf.graph_util.extract_sub_graph(self._sess.graph.as_graph_def(),'network/'+self.output_node_name)
+        graph_to_save = strip_unused_lib.strip_unused(self._sess.graph.as_graph_def(), [self.input_placeholder_name,
+                                                                                        self.label_placeholder_name],
+                                                      [self.output_node_name],
+                                      dtypes.float32.as_datatype_enum)
+        tf.train.write_graph(graph_to_save, self.checkpoint_path, metagraph_filename)
+
