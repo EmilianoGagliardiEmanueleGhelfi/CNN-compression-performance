@@ -20,6 +20,7 @@ import CNNs.CNN_utility as cnnu
 from pattern.pattern import ToBeQuantizedNetwork
 import logging
 from matplotlib import pyplot as plt
+import numpy as np
 
 BATCH_SIZE = 64
 STEPS = 200000
@@ -52,7 +53,8 @@ class Cifar10NetworkWithDataAug(ToBeQuantizedNetwork):
     output_quantized_graph = 'CNNs/cifar10_models/net_serialization/2conv_2fc_da/quantized_graph.pb'
 
     def __init__(self):
-        self._dataset = None
+        self._train_img = None
+        self._train_label = None
         self.test_data = []
         self._input_placeholder = None
         self._output_placeholder = None
@@ -187,7 +189,7 @@ class Cifar10NetworkWithDataAug(ToBeQuantizedNetwork):
         Returns:
           train_op: op for training.
         """
-        train_step = tf.train.AdamOptimizer(1e-3).minimize(total_loss, global_step=global_step)
+        train_step = tf.train.AdamOptimizer(0.000001).minimize(total_loss, global_step=global_step)
 
         return train_step
 
@@ -274,11 +276,10 @@ class Cifar10NetworkWithDataAug(ToBeQuantizedNetwork):
         operation that obtains data and create the computation graph
         """
         cifar10_processing.maybe_download_and_extract()
-        images, _, labels = cifar10_processing.load_training_data()
+        self._train_img, _, self._train_label = cifar10_processing.load_training_data()
         # assign the test dataset that will be used by the workflow to test this and the quantized net
         test_images, test_cls, test_labels = cifar10_processing.load_test_data()
         # create an instance of dataset class
-        self._dataset = DataSet(images, labels, one_hot=True, reshape=False)
         self.test_data = (test_images, test_labels)
         self._train_input_placeholder, self._output_training_node, _ = self._inference(training=True)
         self._input_placeholder, self._output_placeholder, self._label_placeholder = self._inference(training=False)
@@ -321,9 +322,9 @@ class Cifar10NetworkWithDataAug(ToBeQuantizedNetwork):
 
         # training iterations
         for i in range(STEPS + 1):
-            batch = self._dataset.next_batch(BATCH_SIZE)
+            x_batch, y_batch = self._random_batch()
             self._sess.run(self._train_step_node,
-                           feed_dict={self._train_input_placeholder: batch[0], self._label_placeholder: batch[1]})
+                           feed_dict={self._train_input_placeholder: x_batch, self._label_placeholder: y_batch})
             if i % 500 == 0:
                 # run the accuracy node
                 acc = self._sess.run(self._accuracy_node,
@@ -334,6 +335,21 @@ class Cifar10NetworkWithDataAug(ToBeQuantizedNetwork):
                 logging.info(str_to_print)
                 saver.save(self._sess, self.checkpoint_prefix, meta_graph_suffix='pb')
         self._save()
+
+    def _random_batch(self):
+        # Number of images in the training-set.
+        num_images = len(self._train_img)
+
+        # Create a random index.
+        idx = np.random.choice(num_images,
+                               size=BATCH_SIZE,
+                               replace=False)
+
+        # Use the random index to select random images and labels.
+        x_batch = self._train_img[idx, :, :, :]
+        y_batch = self._train_label[idx, :]
+
+        return x_batch, y_batch
 
     def _accuracy(self, output_node, label_placeholder):
         """
