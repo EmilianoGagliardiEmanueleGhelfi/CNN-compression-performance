@@ -22,7 +22,7 @@ import logging
 from matplotlib import pyplot as plt
 
 BATCH_SIZE = 64
-STEPS = 10000
+STEPS = 200000
 
 # Global constants describing the CIFAR-10 data set.
 IMAGE_SIZE = cifar10_processing.IMG_SIZE
