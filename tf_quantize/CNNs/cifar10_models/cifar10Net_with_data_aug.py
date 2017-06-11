@@ -16,7 +16,7 @@ import numpy as np
 # 64 is not too big, too big dataset are dangerous for memory requirements
 BATCH_SIZE = 64
 # magic number for total iteration steps
-STEPS = 10000
+STEPS = 200000
 
 # Global constants describing the CIFAR-10 data set.
 IMAGE_SIZE = cifar10_processing.IMG_SIZE
