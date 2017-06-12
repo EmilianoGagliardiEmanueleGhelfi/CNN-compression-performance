@@ -17,6 +17,9 @@ import numpy as np
 BATCH_SIZE = 64
 # magic number for total iteration steps
 STEPS = 200000
+# learning rates
+INITIAL_LR_RATE = 0.000001
+FINAL_LR_RATE = 0.0000001
 
 # Global constants describing the CIFAR-10 data set.
 IMAGE_SIZE = cifar10_processing.IMG_SIZE
@@ -136,7 +139,7 @@ class Cifar10NetworkWithDataAug(ToBeQuantizedNetwork):
         Returns:
           train_op: op for training.
         """
-        train_step = tf.train.AdamOptimizer(0.000001).minimize(total_loss, global_step=global_step)
+        train_step = tf.train.AdamOptimizer(FINAL_LR_RATE).minimize(total_loss, global_step=global_step)
 
         return train_step
 
