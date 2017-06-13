@@ -14,12 +14,12 @@ import logging
 import numpy as np
 
 # 64 is not too big, too big dataset are dangerous for memory requirements
-BATCH_SIZE = 64
+BATCH_SIZE = 128
 # magic number for total iteration steps
 STEPS = 200000
 # learning rates
 INITIAL_LR_RATE = 0.000001
-FINAL_LR_RATE = 0.0000001
+FINAL_LR_RATE = 0.000001
 
 # Global constants describing the CIFAR-10 data set.
 IMAGE_SIZE = cifar10_processing.IMG_SIZE
