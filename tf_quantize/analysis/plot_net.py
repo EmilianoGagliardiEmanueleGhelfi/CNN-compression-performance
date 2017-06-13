@@ -21,7 +21,7 @@ import math
 
 import weights_ranges
 
-from tf_quantize.net_perf.net_performance import NetPerformance
+from net_perf.net_performance import NetPerformance
 
 help = 'This script takes in input performance files and plot comparisons between original and quantized network'
 
