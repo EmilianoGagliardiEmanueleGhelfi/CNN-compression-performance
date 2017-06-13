@@ -14,7 +14,7 @@ import json
 from pattern.pattern import ToBeQuantizedNetwork
 
 # number of times the evaluation of cache and time performance is executed
-iterations = 500
+iterations = 20
 
 help = 'This script takes as input a cnn implemented using tensorflow. The network have to be defined like the in the' \
        'example file mnist_patter_implemementation.py, extending the ToBeQuantizedNetwork abstract class in ' \
@@ -94,11 +94,11 @@ def cache_perf_test(function_to_call, *args):
         print 'Terminated, accuracy =' + str(acc)
         out, err = process.communicate()
         print err
-        return acc, err
+        return float(acc), err
     else:
         print 'Perf in not available, testing without cache performance'
     acc = function_to_call(*args)
-    return acc, ""
+    return float(acc), ""
 
 
 def get_test_time(function_to_call, *args):
@@ -112,7 +112,7 @@ def get_test_time(function_to_call, *args):
     function_to_call(*args)
     final_time = datetime.now()
     duration = final_time - init_time
-    return duration.total_seconds()
+    return float(duration.total_seconds())
 
 
 def evaluate(output_node, test_data, labels, input_placeholder_node, label_placeholder_node, graph):
@@ -188,7 +188,7 @@ def perf_stderr2dict(perf_output):
             values = line.split(",")
             attr_value = values[0]
             attr_name = values[2].replace('-', '_')
-            perf_dict[attr_name] = attr_value
+            perf_dict[attr_name] = float(attr_value)
     return perf_dict
 
 
@@ -211,8 +211,8 @@ def perf_mean_std(perf_dict_list):
             result[key + '_var'].append(dic[key])
     # variance and mean for each key
     for key in perf_dict_list[0]:
-        result[key + '_mean'] = numpy.mean(result[key + '_mean'])
-        result[key + '_var'] = numpy.var(result[key + '_var'])
+        result[key + '_mean'] = float(numpy.mean(result[key + '_mean']))
+        result[key + '_var'] = float(numpy.var(result[key + '_var']))
     return result
 
 
