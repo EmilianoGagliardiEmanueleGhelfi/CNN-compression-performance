@@ -172,7 +172,7 @@ class Cifar10Network(ToBeQuantizedNetwork):
         biases_final = cnnu.bias_variable([NUM_CLASSES], name='final_fc_bias')
         # get only the last part of the output node since it contains also the scope
         softmax_linear = tf.add(tf.matmul(local4, weights_final), biases_final,
-                                    name=self.output_node_name.split('/')[1])
+                                    name=self.output_node_name)
 
         return x, softmax_linear, y_
 
