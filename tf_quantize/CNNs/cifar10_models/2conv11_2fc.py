@@ -30,7 +30,7 @@ NUM_CLASSES = cifar10_processing.NUM_CLASSES
 img_size_cropped = 24
 
 # setup logging
-logging.basicConfig(filename='CNNs/cifar10_models/net_serialization/2conv_2fc_da/accuracy.log', level=logging.DEBUG,
+logging.basicConfig(filename='CNNs/cifar10_models/net_serialization/2conv11_2fc/accuracy.log', level=logging.DEBUG,
                     format='%(asctime)s %(message)s')
 
 
