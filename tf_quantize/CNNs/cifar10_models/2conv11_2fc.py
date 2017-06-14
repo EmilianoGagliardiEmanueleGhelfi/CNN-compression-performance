@@ -232,7 +232,7 @@ class Cifar10Network(ToBeQuantizedNetwork):
         for i in range(STEPS + 1):
             x_batch, y_batch = self._random_batch()
             self._sess.run(self._train_step_node,
-                           feed_dict={self._train_input_placeholder: x_batch, self._label_placeholder: y_batch})
+                           feed_dict={self._input_placeholder: x_batch, self._label_placeholder: y_batch})
             if i % 500 == 0:
                 # run the accuracy node
                 acc = self._sess.run(self._accuracy_node,
