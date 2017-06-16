@@ -20,7 +20,7 @@ STEPS = 200000
 # STEPS = 1
 # learning rates
 INITIAL_LR_RATE = 0.000001
-FINAL_LR_RATE = 5*0.000001
+FINAL_LR_RATE = 0.000001
 
 # Global constants describing the CIFAR-10 data set.
 IMAGE_SIZE = cifar10_processing.IMG_SIZE
