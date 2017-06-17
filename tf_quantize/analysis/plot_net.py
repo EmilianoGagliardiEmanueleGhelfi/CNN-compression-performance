@@ -18,10 +18,8 @@ import math
 from os import listdir
 from os.path import isfile, join
 import math
-
 import weights_ranges
-
-from net_perf.net_performance import NetPerformance
+from tf_quantize.net_perf.net_performance import NetPerformance
 
 help = 'This script takes in input performance files and plot comparisons between original and quantized network'
 
