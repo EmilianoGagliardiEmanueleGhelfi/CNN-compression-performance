@@ -183,7 +183,7 @@ class CifarBigConv(ToBeQuantizedNetwork):
             # conv2
             kernel2 = cnnu.weight_variable([5, 5, 64, 96], name='kernel2')
             conv2 = tf.nn.conv2d(norm1, kernel2, [1, 1, 1, 1], padding='SAME')
-            biases2 = cnnu.bias_variable([64], name='bias2')
+            biases2 = cnnu.bias_variable([96], name='bias2')
             pre_activation2 = tf.nn.bias_add(conv2, biases2)
             relu2 = tf.nn.relu(pre_activation2)
 
