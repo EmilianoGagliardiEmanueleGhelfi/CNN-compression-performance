@@ -23,7 +23,7 @@ def get_weights_from_pb(pb_file):
         # get all the weights tensor as np.array
         weights = [make_ndarray(node_def.attr['value'].tensor).flatten().tolist()
                    for node_def in graph_def.node
-                   if node_def.attr['value'].tensor.dtype is not 0 and 'Variable' in node_def.name]
+                   if node_def.attr['value'].tensor.dtype is not 0 and ('Variable' in node_def.name or 'kernel' in node_def.name or 'bias' in node_def.name or 'weights' in node_def.name)]
         # flatten the elements in weights
         for i in range(0,len(weights),2):
             weights_to_ret.append(weights[i]+weights[i+1])

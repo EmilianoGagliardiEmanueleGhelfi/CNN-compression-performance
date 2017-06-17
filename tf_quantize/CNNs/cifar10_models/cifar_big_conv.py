@@ -140,7 +140,7 @@ class CifarBigConv(ToBeQuantizedNetwork):
         Returns:
           train_op: op for training.
         """
-        train_step = tf.train.AdamOptimizer(FINAL_LR_RATE).minimize(total_loss, global_step=global_step)
+        train_step = tf.train.AdamOptimizer(INITIAL_LR_RATE).minimize(total_loss, global_step=global_step)
 
         return train_step
 
