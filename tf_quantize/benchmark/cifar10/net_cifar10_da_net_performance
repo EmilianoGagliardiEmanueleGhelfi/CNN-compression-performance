@@ -18,7 +18,7 @@
         "LLC_store_misses_var": 2312858830677.847, 
         "path": "CNNs/cifar10_models/net_serialization/2conv_2fc_da/output_graph.pb", 
         "cache_references_mean": 1140198444.1, 
-        "name": "cifar10_net", 
+        "name": "cifar10_net_da",
         "quantized": false, 
         "test_time_var": 1.2588660498254002e-08, 
         "L1_dcache_loads_var": 1984887979489741.2, 
