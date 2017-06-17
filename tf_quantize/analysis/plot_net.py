@@ -18,9 +18,7 @@ import math
 from os import listdir
 from os.path import isfile, join
 import math
-
 import weights_ranges
-
 from tf_quantize.net_perf.net_performance import NetPerformance
 
 help = 'This script takes in input performance files and plot comparisons between original and quantized network'
@@ -133,6 +131,7 @@ def bar_chart(original_data, quantized_data, xNames, yLabel, title, filename, or
 
 
 def histogram(weights_list, filename, net_name):
+    print len(weights_list)
     fig, axes = plt.subplots(nrows=int(math.ceil(float(len(weights_list))/float(2))), ncols=2)
     ax_list = axes.flatten()
     for i in range(0,len(weights_list)):

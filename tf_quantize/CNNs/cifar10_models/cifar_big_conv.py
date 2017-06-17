@@ -14,12 +14,12 @@ import logging
 import numpy as np
 
 # 64 is not too big, too big dataset are dangerous for memory requirements
-BATCH_SIZE = 128
+BATCH_SIZE = 64
 # magic number for total iteration steps
 STEPS = 200000
 # STEPS = 1
 # learning rates
-INITIAL_LR_RATE = 0.00001
+INITIAL_LR_RATE = 0.0001
 FINAL_LR_RATE = 0.0001
 
 # Global constants describing the CIFAR-10 data set.
@@ -30,25 +30,25 @@ NUM_CLASSES = cifar10_processing.NUM_CLASSES
 img_size_cropped = 24
 
 # setup logging
-logging.basicConfig(filename='CNNs/cifar10_models/net_serialization/2conv11_2fc/accuracy.log', level=logging.DEBUG,
+logging.basicConfig(filename='CNNs/cifar10_models/net_serialization/cifar_big_conv/accuracy.log', level=logging.DEBUG,
                     format='%(asctime)s %(message)s')
 
 
-class Cifar10Network(ToBeQuantizedNetwork):
+class CifarBigConv(ToBeQuantizedNetwork):
     # properties needed to evaluate the quantized network in workflow
     test_iterations = 1
     test_data = []  # initialized in prepare, tuple with input, labels
     input_placeholder_name = 'input'
     label_placeholder_name = 'label'
-    output_node_name = 'output'
+    output_node_name = 'network_1/output'
     net_name = "cifar10_net"
 
     # properties needed to export to pb in workflow. We put checkpoint data, meta graph
-    checkpoint_prefix = 'CNNs/cifar10_models/net_serialization/2conv11_2fc/net'
-    checkpoint_path = 'CNNs/cifar10_models/net_serialization/2conv11_2fc'
-    metagraph_path = 'CNNs/cifar10_models/net_serialization/2conv11_2fc/metagraph.pb'
-    output_pb_path = 'CNNs/cifar10_models/net_serialization/2conv11_2fc/output_graph.pb'
-    output_quantized_graph = 'CNNs/cifar10_models/net_serialization/2conv11_2fc/quantized_graph.pb'
+    checkpoint_prefix = 'CNNs/cifar10_models/net_serialization/cifar_big_conv/net'
+    checkpoint_path = 'CNNs/cifar10_models/net_serialization/cifar_big_conv'
+    metagraph_path = 'CNNs/cifar10_models/net_serialization/cifar_big_conv/metagraph.pb'
+    output_pb_path = 'CNNs/cifar10_models/net_serialization/cifar_big_conv/output_graph.pb'
+    output_quantized_graph = 'CNNs/cifar10_models/net_serialization/cifar_big_conv/quantized_graph.pb'
 
     def __init__(self):
         self._train_img = None
@@ -67,17 +67,52 @@ class Cifar10Network(ToBeQuantizedNetwork):
         self._global_step = None
         self._train_input_placeholder = None
 
-    def pre_process(self, images):
+    def pre_process_image(self, image):
+        # This function takes a single image as input,
+        # Used for data augmentation, random crop and other random manipulations
+        # Randomly crop the input image.
+        image = tf.random_crop(image, size=[img_size_cropped, img_size_cropped, 3])
+
+        # Randomly flip the image horizontally.
+        image = tf.image.random_flip_left_right(image)
+
+        # Randomly adjust hue, contrast and saturation.
+        image = tf.image.random_hue(image, max_delta=0.05)
+        image = tf.image.random_contrast(image, lower=0.3, upper=1.0)
+        image = tf.image.random_brightness(image, max_delta=0.2)
+        image = tf.image.random_saturation(image, lower=0.0, upper=2.0)
+
+        # Some of these functions may overflow and result in pixel
+        # values beyond the [0, 1] range. It is unclear from the
+        # documentation of TensorFlow 0.10.0rc0 whether this is
+        # intended. A simple solution is to limit the range.
+
+        # Limit the image pixels between [0, 1] in case of overflow.
+        image = tf.minimum(image, 1.0)
+        image = tf.maximum(image, 0.0)
+        # For training, add the following to the TensorFlow graph.
+
+        return image
+
+    def pre_process(self, images, training):
         """
         :param images: tensor placeholder of the input of the graph
+        :param training: boolean, True for training, False for inference
         :return: the images preprocessed as tensor
         """
         # Use TensorFlow to loop over all the input images and call
         # the function above which takes a single image as input.
         # notice that freeze is not good with tf iterations so for the inference graph we do not want to iterate
-        images = tf.image.resize_image_with_crop_or_pad(images,
-                                                        target_height=img_size_cropped,
-                                                        target_width=img_size_cropped)
+        if training:
+            images.set_shape([BATCH_SIZE, IMAGE_SIZE, IMAGE_SIZE, 3])
+            images = tf.map_fn(lambda image: self.pre_process_image(image), images)
+        else:
+            # only resize image for inference graph
+            # Crop the input image around the centre so it is the same
+            # size as images that are randomly cropped during training.
+            images = tf.image.resize_image_with_crop_or_pad(images,
+                                                            target_height=img_size_cropped,
+                                                            target_width=img_size_cropped)
 
         return images
 
@@ -105,11 +140,11 @@ class Cifar10Network(ToBeQuantizedNetwork):
         Returns:
           train_op: op for training.
         """
-        train_step = tf.train.AdamOptimizer(FINAL_LR_RATE).minimize(total_loss, global_step=global_step)
+        train_step = tf.train.AdamOptimizer(INITIAL_LR_RATE).minimize(total_loss, global_step=global_step)
 
         return train_step
 
-    def _inference(self):
+    def _inference(self, training=True):
         """Build the CIFAR-10 model.
         Returns:
           Logits.
@@ -117,64 +152,71 @@ class Cifar10Network(ToBeQuantizedNetwork):
         # We instantiate all variables using tf.get_variable() so they can be shared between train and
         # inference graph. using get_variable it does not create another variable is there's already a variable
         # with the same name.
-        x = tf.placeholder(tf.float32, shape=[None, IMAGE_SIZE, IMAGE_SIZE, 3], name=self.input_placeholder_name)
-        y_ = tf.placeholder(tf.float32, shape=[None, 10], name=self.label_placeholder_name)
 
-        img = x
-        # do preprocessing if needed
-        img = self.pre_process(images=img)
+        if not training:
+            x = tf.placeholder(tf.float32, shape=[None, IMAGE_SIZE, IMAGE_SIZE, 3], name=self.input_placeholder_name)
+            y_ = tf.placeholder(tf.float32, shape=[None, 10], name=self.label_placeholder_name)
+        else:
+            x = tf.placeholder(tf.float32, shape=[None, IMAGE_SIZE, IMAGE_SIZE, 3], name=self.input_placeholder_name+'_train')
+            y_ = tf.placeholder(tf.float32, shape=[None, 10], name=self.label_placeholder_name)
 
-        # conv1
-        kernel1 = cnnu.weight_variable([5, 5, 3, 64], name='kernel1')
-        conv1 = tf.nn.conv2d(img, kernel1, [1, 1, 1, 1], padding='SAME')
-        biases1 = cnnu.bias_variable([64], name='bias1')
-        pre_activation = tf.nn.bias_add(conv1, biases1)
-        relu1 = tf.nn.relu(pre_activation)
+        # reuse variable only for inference
+        with tf.variable_scope('network', reuse=not training):
+            img = x
+            # do preprocessing if needed
+            img = self.pre_process(images=img, training=training)
 
-        # pool1
-        pool1 = tf.nn.max_pool(relu1, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1],
-                               padding='SAME', name='pool1')
-        # norm1
-        norm1 = tf.nn.lrn(pool1, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75,
-                         name='norm1')
+            # conv1
+            kernel1 = cnnu.weight_variable([5, 5, 3, 64], name='kernel1')
+            conv1 = tf.nn.conv2d(img, kernel1, [1, 1, 1, 1], padding='SAME')
+            biases1 = cnnu.bias_variable([64], name='bias1')
+            pre_activation = tf.nn.bias_add(conv1, biases1)
+            relu1 = tf.nn.relu(pre_activation)
 
-        # conv2
-        kernel2 = cnnu.weight_variable([5, 5, 64, 64], name='kernel2')
-        conv2 = tf.nn.conv2d(norm1, kernel2, [1, 1, 1, 1], padding='SAME')
-        biases2 = cnnu.bias_variable([64], name='bias2')
-        pre_activation2 = tf.nn.bias_add(conv2, biases2)
-        relu2 = tf.nn.relu(pre_activation2)
+            # pool1
+            pool1 = tf.nn.max_pool(relu1, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1],
+                                   padding='SAME', name='pool1')
+            # norm1
+            norm1 = tf.nn.lrn(pool1, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75,
+                             name='norm1')
 
-        # norm2
-        norm2 = tf.nn.lrn(relu2, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75,
-                          name='norm2')
-        # pool2
-        pool2 = tf.nn.max_pool(norm2, ksize=[1, 2, 2, 1],
-                               strides=[1, 2, 2, 1], padding='SAME', name='pool2')
+            # conv2
+            kernel2 = cnnu.weight_variable([5, 5, 64, 96], name='kernel2')
+            conv2 = tf.nn.conv2d(norm1, kernel2, [1, 1, 1, 1], padding='SAME')
+            biases2 = cnnu.bias_variable([96], name='bias2')
+            pre_activation2 = tf.nn.bias_add(conv2, biases2)
+            relu2 = tf.nn.relu(pre_activation2)
 
-        # local3
-        # Move everything into depth so we can perform a single matrix multiply.
-        reshape = tf.reshape(pool2, [-1, 6 * 6 * 64])
-        weights_1 = cnnu.weight_variable([6 * 6 * 64, 256], name='local_weights_3')
-        biases_1 = cnnu.bias_variable([256], name='local_bias_3')
-        local3 = tf.nn.relu(tf.matmul(reshape, weights_1) + biases_1, name='local3')
+            # norm2
+            norm2 = tf.nn.lrn(relu2, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75,
+                              name='norm2')
+            # pool2
+            pool2 = tf.nn.max_pool(norm2, ksize=[1, 2, 2, 1],
+                                   strides=[1, 2, 2, 1], padding='SAME', name='pool2')
 
-        # local4
-        weights_2 = cnnu.weight_variable([256, 192], name='local_weights_4')
-        biases_2 = cnnu.bias_variable([192], name='local_bias4')
-        local4 = tf.nn.relu(tf.matmul(local3, weights_2) + biases_2, name='local4')
+            # local3
+            # Move everything into depth so we can perform a single matrix multiply.
+            reshape = tf.reshape(pool2, [-1, 6 * 6 * 96])
+            weights_1 = cnnu.weight_variable([6 * 6 * 96, 256], name='local_weights_3')
+            biases_1 = cnnu.bias_variable([256], name='local_bias_3')
+            local3 = tf.nn.relu(tf.matmul(reshape, weights_1) + biases_1, name='local3')
 
-        # linear layer(WX + b),
-        # We don't apply softmax here because
-        # tf.nn.sparse_softmax_cross_entropy_with_logits accepts the unscaled logits
-        # and performs the softmax internally for efficiency.
-        weights_final = cnnu.weight_variable([192, NUM_CLASSES], name='final_fc_weights')
-        biases_final = cnnu.bias_variable([NUM_CLASSES], name='final_fc_bias')
-        # get only the last part of the output node since it contains also the scope
-        softmax_linear = tf.add(tf.matmul(local4, weights_final), biases_final,
-                                    name=self.output_node_name)
+            # local4
+            weights_2 = cnnu.weight_variable([256, 192], name='local_weights_4')
+            biases_2 = cnnu.bias_variable([192], name='local_bias4')
+            local4 = tf.nn.relu(tf.matmul(local3, weights_2) + biases_2, name='local4')
 
-        return x, softmax_linear, y_
+            # linear layer(WX + b),
+            # We don't apply softmax here because
+            # tf.nn.sparse_softmax_cross_entropy_with_logits accepts the unscaled logits
+            # and performs the softmax internally for efficiency.
+            weights_final = cnnu.weight_variable([192, NUM_CLASSES], name='final_fc_weights')
+            biases_final = cnnu.bias_variable([NUM_CLASSES], name='final_fc_bias')
+            # get only the last part of the output node since it contains also the scope
+            softmax_linear = tf.add(tf.matmul(local4, weights_final), biases_final,
+                                        name=self.output_node_name.split('/')[1])
+
+            return x, softmax_linear, y_
 
     """
     from here there is the implementation of the prepare, train, evaluate pattern
@@ -190,14 +232,15 @@ class Cifar10Network(ToBeQuantizedNetwork):
         test_images, test_cls, test_labels = cifar10_processing.load_test_data()
         # create an instance of dataset class
         self.test_data = (test_images, test_labels)
-        self._input_placeholder, self._output_placeholder, self._label_placeholder = self._inference()
+        self._train_input_placeholder, self._output_training_node, _ = self._inference(training=True)
+        self._input_placeholder, self._output_placeholder, self._label_placeholder = self._inference(training=False)
         # create a global step
         # First create a TensorFlow variable that keeps track of the number of optimization iterations performed so far.
         # we want to save this variable with all the other TensorFlow variables in the checkpoints.
         # Note that trainable=False which means that TensorFlow will not try to optimize this variable.
         global_step = tf.Variable(initial_value=0,
                                   name='global_step', trainable=False)
-        self._loss_node = self._loss(self._output_placeholder, self._label_placeholder)
+        self._loss_node = self._loss(self._output_training_node, self._label_placeholder)
         self._accuracy_node = self._accuracy(self._output_placeholder, self._label_placeholder)
         self._train_step_node = self._train(self._loss_node, global_step=global_step)
 
@@ -232,7 +275,7 @@ class Cifar10Network(ToBeQuantizedNetwork):
         for i in range(STEPS + 1):
             x_batch, y_batch = self._random_batch()
             self._sess.run(self._train_step_node,
-                           feed_dict={self._input_placeholder: x_batch, self._label_placeholder: y_batch})
+                           feed_dict={self._train_input_placeholder: x_batch, self._label_placeholder: y_batch})
             if i % 500 == 0:
                 # run the accuracy node
                 acc = self._sess.run(self._accuracy_node,
