@@ -162,6 +162,97 @@ Purposes
 status open
 
 \begin_layout Plain Layout
+Problem
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_deeper
+\begin_layout Standard
+Accuracy/inference speed trade-off
+\end_layout
+
+\begin_layout Itemize
+For real world application, convolutional neural network(CNN) model can
+ take more than 100MB of space and can be computationally too expensive
+\end_layout
+
+\begin_layout Itemize
+How to enable embedded devices like smart phones with the power of Neural
+ Networks?
+\end_layout
+
+\begin_layout Itemize
+There is the need of floating point precision? 
+\begin_inset Newline newline
+\end_inset
+
+No, deep neural network tends to cope well with noise in their input
+\end_layout
+
+\begin_layout Itemize
+Training still needs floating point precision to work, it is an iteration
+ of little incremental adjustments of the weights
+\end_layout
+
+\end_deeper
+\begin_layout Standard
+\begin_inset Separator plain
+\end_inset
+
+
+\end_layout
+
+\begin_layout Frame
+\begin_inset Argument 4
+status open
+
+\begin_layout Plain Layout
+Solution
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_deeper
+\begin_layout Standard
+The solution is quantization.
+\end_layout
+
+\begin_layout Standard
+Deep networks can be trained with floating point precision, then a quantization
+ algorithm can be applied to obtain smaller models and speed up the inference
+ phase reducing memory requirements:
+\end_layout
+
+\begin_layout Itemize
+Fixed-point compute units are typically faster and consume far less hardware
+ resources and power than floating-point engines
+\end_layout
+
+\begin_layout Itemize
+Low-precision data representation reduces the memory footprint, enabling
+ larger models to fit within the given memory capacity
+\end_layout
+
+\end_deeper
+\begin_layout Standard
+\begin_inset Separator plain
+\end_inset
+
+
+\end_layout
+
+\begin_layout Frame
+\begin_inset Argument 4
+status open
+
+\begin_layout Plain Layout
 Project purpose
 \end_layout
 
@@ -177,7 +268,7 @@ Using a machine learning framework with support for convolutional neural
 
 \begin_deeper
 \begin_layout Itemize
-Define different kind of networks
+Define different kind of network
 \end_layout
 
 \begin_layout Itemize
@@ -193,8 +284,7 @@ Evaluate the original and the quantized models
 \end_layout
 
 \begin_layout Itemize
-Make a comparison in term of size of the model, cache misses, and inference
- time
+Compare them in terms of model size, cache misses, and inference time
 \end_layout
 
 \end_deeper
@@ -449,52 +539,6 @@ status open
 
 \end_layout
 
-\begin_layout Standard
-\begin_inset Separator plain
-\end_inset
-
-
-\end_layout
-
-\begin_layout Frame
-\begin_inset Argument 4
-status open
-
-\begin_layout Plain Layout
-Why quantize?
-\end_layout
-
-\end_inset
-
-
-\end_layout
-
-\begin_deeper
-\begin_layout Standard
-Accuracy/inference speed trade-off
-\end_layout
-
-\begin_layout Itemize
-Deep networks tend to cope very well with high levels of noise in their
- inputs.
-\end_layout
-
-\begin_layout Itemize
-It seems that there is no need of floating point precision
-\end_layout
-
-\begin_layout Itemize
-Training still needs floating point precision to work, it is an iteration
- of little incremental adjustments of the weights
-\end_layout
-
-\begin_layout Standard
-So deep networks are trained with floating point precision, then a quantization
- algorithm can be applied to obtain smaller models and speed up the inference
- phase
-\end_layout
-
-\end_deeper
 \begin_layout Standard
 \begin_inset Separator plain
 \end_inset
@@ -1863,6 +1907,11 @@ Github repository of the project:
 
 \size scriptsize
 https://github.com/EmilianoGagliardiEmanueleGhelfi/CNN-compression-performance
+\end_layout
+
+\begin_layout Itemize
+Deep Learning with Limited Numerical Precision (Suyog Gupta, Ankur Agrawal,
+ Kailash Gopalakrishnan)
 \end_layout
 
 \end_deeper

@@ -3,10 +3,11 @@ This script takes in input a pb file, restores the weights of the network, and t
 """
 import argparse
 from pprint import pprint
-
+import plot_weights
 import numpy as np
 import tensorflow as tf
 from tensorflow.contrib.util import make_ndarray
+
 
 
 def get_weights_from_pb(pb_file):
