@@ -251,11 +251,11 @@ def main(model, to_train, to_quantize, to_evaluate):
             # get test size, test_data is not a tensor, convert it with convert_to_tensor and get its shapes
             # shape[0] is the number of items, shape[1] is product of number of pixel I think
             test_data_size = tf.convert_to_tensor(model.test_data[0]).get_shape()[0].value
-            o_current_dict['test_time'] = get_test_time(evaluate, o_output_node, model.test_data[0], model.test_data[1],
-                                                        o_input_placeholder, o_label_placeholder, o_graph)/test_data_size
+            o_current_dict['test_time'] = (get_test_time(evaluate, o_output_node, model.test_data[0], model.test_data[1],
+                                                        o_input_placeholder, o_label_placeholder, o_graph)/test_data_size)*1000
 
-            q_current_dict['test_time'] = get_test_time(evaluate, q_output_node, model.test_data[0], model.test_data[1],
-                                                        q_input_placeholder, q_label_placeholder, q_graph)/test_data_size
+            q_current_dict['test_time'] = (get_test_time(evaluate, q_output_node, model.test_data[0], model.test_data[1],
+                                                        q_input_placeholder, q_label_placeholder, q_graph)/test_data_size)*1000
             o_dict_list.append(o_current_dict)
             q_dict_list.append(q_current_dict)
 

@@ -41,7 +41,7 @@ class Cifar10NetworkWithDataAug(ToBeQuantizedNetwork):
     input_placeholder_name = 'input'
     label_placeholder_name = 'label'
     output_node_name = 'network_1/output'
-    net_name = "cifar10_net"
+    net_name = "cifar10_net_da"
 
     # properties needed to export to pb in workflow. We put checkpoint data, meta graph
     checkpoint_prefix = 'CNNs/cifar10_models/net_serialization/2conv_2fc_da/net'

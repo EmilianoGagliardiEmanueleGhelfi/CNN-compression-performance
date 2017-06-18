@@ -42,7 +42,7 @@ def plot(net_files):
     original_acc = [accuracy_list[i] for i in range(0, len(accuracy_list), 2)]
     quantized_acc = [accuracy_list[i] for i in range(1, len(accuracy_list), 2)]
     bar_chart(original_acc, quantized_acc, (net_list[i].name for i in range(0, len(net_list),2)), "Accuracy",
-              "Comparison of accuracies", "img/acc.png")
+              "Comparison of accuracies", "img/acc.png", top_label=True)
 
     # file size
     file_size = [n.size for n in net_list]
@@ -69,7 +69,7 @@ def plot(net_files):
     original_time_std = [test_time_std[i] for i in range(0, len(test_time), 2)]
     quantized_time_std = [test_time_std[i] for i in range(1, len(test_time), 2)]
     bar_chart(original_time, quantized_time, (net_list[i].name for i in range(0, len(net_list), 2)), "Inference Time",
-              "Comparison of Inference time", "img/test_time.png",original_std=original_time_std, quant_std=quantized_time_std)
+              "Comparison of Inference time", "img/test_time.png",original_std=original_time_std, quant_std=quantized_time_std, top_label=True)
 
     # cache misses
     cache_misses = [n.cache_misses_mean for n in net_list]
@@ -89,7 +89,7 @@ def plot(net_files):
         histogram(weights, 'img/weights'+net.name+'.png', net.name)
 
 
-def bar_chart(original_data, quantized_data, xNames, yLabel, title, filename, original_std = None, quant_std = None):
+def bar_chart(original_data, quantized_data, xNames, yLabel, title, filename, original_std=None, quant_std=None, top_label=False):
     """
     :param original_data: original data to plot
     :param quantized_data: quantized data to plot
@@ -99,6 +99,7 @@ def bar_chart(original_data, quantized_data, xNames, yLabel, title, filename, or
     :param filename: filename to write
     :param original_std: std deviation of original data
     :param quant_std: std deviation of quantized data
+    :param top_label: label to be inserted on top of each bar
     :return:
     """
     # length of the array, to get the correct indexes
@@ -107,23 +108,37 @@ def bar_chart(original_data, quantized_data, xNames, yLabel, title, filename, or
     x = np.arange(N)
     # width of the bar
     width = 0.2
+    fig, ax = plt.subplots()
     if original_std is None:
-        rects1 = plt.bar(x, original_data, width,
+        rects1 = ax.bar(x, original_data, width,
                          color='b',
                          label='Original')
-        rects2 = plt.bar(x + width, quantized_data, width,
+        rects2 = ax.bar(x + width, quantized_data, width,
                          color='r',
                          label='Quantized')
     else:
-        rects1 = plt.bar(x, original_data, width,
+        rects1 = ax.bar(x, original_data, width,
                          color='b',
                          label='Original', yerr=original_std)
-        rects2 = plt.bar(x + width, quantized_data, width,
+        rects2 = ax.bar(x + width, quantized_data, width,
                          color='r',
                          label='Quantized', yerr=quant_std)
     plt.ylabel(yLabel)
     plt.title(title)
-    plt.xticks(x + width, xNames, rotation = 45)
+    plt.xticks(x + width, xNames, rotation=45)
+    # add top labels
+    def autolabel(rects):
+        """
+        Attach a text label above each bar displaying its height
+        """
+        for rect in rects:
+            height = rect.get_height()
+            ax.text(rect.get_x() + rect.get_width() / 2., 1.02 * height,
+                    '%.3f' % height,
+                    ha='center', va='bottom')
+    if top_label:
+        autolabel(rects1)
+        autolabel(rects2)
     plt.legend()
     plt.tight_layout()
     plt.savefig(filename)
