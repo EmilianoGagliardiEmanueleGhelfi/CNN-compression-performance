@@ -172,7 +172,7 @@ Project purpose
 
 \begin_layout Frame
 Using a machine learning framework with support for convolutional neural
- networks
+ networks:
 \end_layout
 
 \begin_deeper
@@ -992,7 +992,7 @@ Some low precision operations are already implemented
 \end_layout
 
 \begin_layout Standard
-We tried different topologies of networks, to see how quantization affect
+We tried different topologies of networks, to see how quantization affects
  different architectures
 \end_layout
 
@@ -1034,8 +1034,8 @@ The core methods of the pattern are
 
 \begin_deeper
 \begin_layout Itemize
-prepare: build the computational graph of the network and the training step,
- load the data
+prepare: load the data and build the computational graph and the training
+ step of the network 
 \end_layout
 
 \begin_layout Itemize
@@ -1082,7 +1082,7 @@ plots the data
 status open
 
 \begin_layout Plain Layout
-Topologies
+Topologies on MNIST
 \end_layout
 
 \end_inset
@@ -1114,7 +1114,7 @@ status collapsed
 \begin_inset Caption Standard
 
 \begin_layout Plain Layout
-big
+Big
 \end_layout
 
 \end_inset
@@ -1153,7 +1153,7 @@ status collapsed
 \begin_inset Caption Standard
 
 \begin_layout Plain Layout
-more conv
+More convolutional
 \end_layout
 
 \end_inset
@@ -1196,7 +1196,7 @@ status collapsed
 \begin_inset Caption Standard
 
 \begin_layout Plain Layout
-more FC
+More FC
 \end_layout
 
 \end_inset
@@ -1239,7 +1239,7 @@ status collapsed
 \begin_inset Caption Standard
 
 \begin_layout Plain Layout
-tf example
+Tf Example
 \end_layout
 
 \end_inset
@@ -1270,7 +1270,7 @@ tf example
 \begin_inset Float figure
 wide false
 sideways false
-status open
+status collapsed
 
 \begin_layout Plain Layout
 \noindent
@@ -1278,7 +1278,7 @@ status open
 \begin_inset Caption Standard
 
 \begin_layout Plain Layout
-only FC
+Only FC
 \end_layout
 
 \end_inset
@@ -1321,7 +1321,7 @@ only FC
 status open
 
 \begin_layout Plain Layout
-Some data - accuracy
+Some data on MNIST - accuracy
 \end_layout
 
 \end_inset
@@ -1369,7 +1369,7 @@ status open
 status open
 
 \begin_layout Plain Layout
-Some data - models size
+Some data on MNIST - models size
 \end_layout
 
 \end_inset
@@ -1416,7 +1416,7 @@ status open
 status open
 
 \begin_layout Plain Layout
-Some data - data cache misses
+Some data on MNIST - data cache misses
 \end_layout
 
 \end_inset
@@ -1459,7 +1459,7 @@ status open
 status open
 
 \begin_layout Plain Layout
-Some data - inference time
+Some data on MNIST - inference time
 \end_layout
 
 \end_inset
@@ -1477,6 +1477,187 @@ status open
 \begin_layout Plain Layout
 \begin_inset Graphics
 	filename images/tf-results/test_time.png
+	width 75page%
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_deeper
+\begin_layout Standard
+\begin_inset Separator plain
+\end_inset
+
+
+\end_layout
+
+\begin_layout Frame
+\begin_inset Argument 4
+status open
+
+\begin_layout Plain Layout
+Some data on CIFAR10 - accuracy
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_deeper
+\begin_layout Standard
+\noindent
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\begin_inset Graphics
+	filename images/tf-results/cifar10/acc.png
+	width 100pheight%
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_deeper
+\begin_layout Frame
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Separator plain
+\end_inset
+
+
+\end_layout
+
+\begin_layout Frame
+\begin_inset Argument 4
+status open
+
+\begin_layout Plain Layout
+Some data on CIFAR10 - models size
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_deeper
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\begin_inset Graphics
+	filename images/tf-results/cifar10/size.png
+	width 75page%
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_deeper
+\begin_layout Frame
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Separator plain
+\end_inset
+
+
+\end_layout
+
+\begin_layout Frame
+\begin_inset Argument 4
+status open
+
+\begin_layout Plain Layout
+Some data on CIFAR10 - data cache misses
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_deeper
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\begin_inset Graphics
+	filename images/tf-results/cifar10/misses.png
+	width 75page%
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_deeper
+\begin_layout Standard
+\begin_inset Separator plain
+\end_inset
+
+
+\end_layout
+
+\begin_layout Frame
+\begin_inset Argument 4
+status open
+
+\begin_layout Plain Layout
+Some data on CIFAR10 - inference time
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_deeper
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\begin_inset Graphics
+	filename images/tf-results/cifar10/test_time.png
 	width 75page%
 
 \end_inset
@@ -1554,6 +1735,10 @@ Original net - tensorflow benchmark tool
 
 \begin_deeper
 \begin_layout Standard
+Original network on MNIST dataset:
+\end_layout
+
+\begin_layout Standard
 \begin_inset Float figure
 placement t
 wide false
@@ -1561,6 +1746,7 @@ sideways false
 status open
 
 \begin_layout Plain Layout
+\align center
 \begin_inset Graphics
 	filename images/tf benchmark tool/original perf.png
 	lyxscale 20
@@ -1599,6 +1785,10 @@ Quantized net - tensorflow benchmark tool
 
 \begin_deeper
 \begin_layout Standard
+Quantized network on MNIST dataset:
+\end_layout
+
+\begin_layout Standard
 \begin_inset Float figure
 placement t
 wide false
@@ -1606,6 +1796,7 @@ sideways false
 status open
 
 \begin_layout Plain Layout
+\align center
 \begin_inset Graphics
 	filename images/tf benchmark tool/quantized perf.png
 	lyxscale 20
@@ -1648,11 +1839,20 @@ References
 
 \begin_deeper
 \begin_layout Itemize
-Tensorflow: https://www.tensorflow.org
+Tensorflow quantization:
+\size scriptsize
+ https://www.tensorflow.org/performance/quantization 
+\begin_inset Newline newline
+\end_inset
+
+https://github.com/tensorflow/tensorflow/tree/master/tensorflow/tools/graph_trans
+forms
 \end_layout
 
 \begin_layout Itemize
-Ristretto: http://lepsucd.com/?page_id=621
+Ristretto: 
+\size scriptsize
+http://lepsucd.com/?page_id=621
 \end_layout
 
 \begin_layout Itemize
@@ -1660,6 +1860,8 @@ Github repository of the project:
 \begin_inset Newline newline
 \end_inset
 
+
+\size scriptsize
 https://github.com/EmilianoGagliardiEmanueleGhelfi/CNN-compression-performance
 \end_layout
 
