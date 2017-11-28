@@ -14,5 +14,13 @@ Change the value to -1
 
 - Install tensorflow from sources
 - build the quantization tool
-- build a neural network following the pattern of abstract class ToBeQuantized
+- build a neural network following the pattern of abstract class [ToBeQuantized](https://github.com/EmilianoGagliardiEmanueleGhelfi/CNN-compression-performance/blob/master/tf_quantize/pattern/pattern.py)
 - run workflow.py with the class as argument
+
+Example:
+
+```
+python workflow.py --quantize True --evaluate True --train True --module_name CNNs.mnist_models.2conv_2fc --class_name Mnist2Conv2Fc
+```
+
+(Actually it is not very user friendly, sorry)
