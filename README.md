@@ -10,6 +10,9 @@ The same steps are done with Tensorflow and Quantisation tool. The quantisation 
 
 A more detailed description is inside the readme of each folder.
 
+# Results
+![Some imgs](https://github.com/EmilianoGagliardiEmanueleGhelfi/CNN-compression-performance/blob/master/doc/images/tf-results/cache_misses.png)
+
 # Authors
 
 - Emanuele Ghelfi
