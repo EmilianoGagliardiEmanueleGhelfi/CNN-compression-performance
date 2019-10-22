@@ -29,4 +29,4 @@ tensorflow==1.2.0rc1
 traitlets==4.3.2
 urllib==1.21.1
 urllib3==1.21.1
-Werkzeug==0.12.2
+Werkzeug==0.15.3
