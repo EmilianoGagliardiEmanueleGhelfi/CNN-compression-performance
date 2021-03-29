@@ -29,7 +29,7 @@ prompt-toolkit==1.0.14
 protobuf==3.2.0
 ptyprocess==0.5.1
 pydot==1.2.3
-Pygments==2.2.0
+Pygments==2.7.4
 pyparsing==2.2.0
 python-dateutil==1.5
 python-gflags==3.1.1
