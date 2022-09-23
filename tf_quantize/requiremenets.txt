@@ -18,7 +18,7 @@ nbformat==4.3.0
 numpy==1.12.1
 pbr==3.0.1
 plotly==2.0.9
-protobuf==3.3.0
+protobuf==3.18.3
 pyparsing==2.2.0
 python-dateutil==2.6.0
 pytz==2017.2
